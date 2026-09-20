@@ -1,0 +1,430 @@
+:root {
+  --cream: #ece7dc;
+  --muted: #8d877c;
+  --ink: #0e0d0b;
+  --tile: rgba(255, 248, 236, 0.045);
+  --tile-border: rgba(255, 248, 236, 0.09);
+  --atmosphere: #0e0d0b;
+  --bubble-fill: #c9b0ff;
+  --bubble-glow: rgba(186, 160, 255, 0.45);
+  --scale: 0.42;
+  --bubble-opacity: 1;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  height: 100%;
+}
+
+body {
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
+  color: var(--cream);
+  background: var(--ink);
+  overflow: hidden;
+}
+
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 42%, var(--atmosphere), transparent 70%),
+    var(--ink);
+  transition: background 700ms ease, filter 700ms ease;
+  z-index: 0;
+}
+
+body[data-mood="calm"] {
+  --ink: #08070d;
+}
+
+body[data-mood="calm"] .atmosphere {
+  filter: brightness(0.82) saturate(0.9);
+}
+
+body[data-mood="bright"] {
+  --ink: #140c08;
+}
+
+body[data-mood="bright"] .atmosphere {
+  filter: brightness(1.06) saturate(1.04);
+}
+
+.grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+  opacity: 0.14;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+}
+
+.screen {
+  position: relative;
+  z-index: 1;
+}
+
+.home {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.1rem;
+  padding: calc(2rem + env(safe-area-inset-top)) 1.25rem calc(2rem + env(safe-area-inset-bottom));
+}
+
+.brand {
+  text-align: center;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+}
+
+.brand p {
+  margin: 0.45rem 0 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.brand .whisper {
+  margin: 0.55rem 0 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: none;
+  color: var(--muted);
+  opacity: 0.75;
+  min-height: 1em;
+}
+
+.patterns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  width: min(100%, 22.5rem);
+}
+
+.pattern {
+  appearance: none;
+  border: 1px solid var(--tile-border);
+  background: var(--tile);
+  color: var(--cream);
+  border-radius: 1.35rem;
+  min-height: 7.1rem;
+  padding: 1.05rem 1rem 0.95rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.1rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.pattern:hover {
+  background: rgba(255, 248, 236, 0.07);
+}
+
+.pattern:focus-visible {
+  outline: 2px solid var(--cream);
+  outline-offset: 3px;
+}
+
+.pattern.is-selected {
+  border-color: color-mix(in srgb, var(--accent) 70%, white 10%);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.orb {
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 18px var(--accent);
+}
+
+.pattern-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+}
+
+.pattern-label {
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+}
+
+.pattern-protocol {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.technique {
+  margin: 0;
+  min-height: 1.25em;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.prefs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.55rem 1.15rem;
+  width: min(100%, 22.5rem);
+}
+
+.pref {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pref input {
+  accent-color: var(--cream);
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.start {
+  appearance: none;
+  border: 0;
+  width: min(100%, 22.5rem);
+  height: 3.35rem;
+  border-radius: 999px;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.start:hover {
+  transform: translateY(-1px);
+}
+
+.start:active {
+  transform: translateY(0);
+}
+
+.start:focus-visible {
+  outline: 2px solid var(--cream);
+  outline-offset: 3px;
+}
+
+.session {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8vh;
+  user-select: none;
+}
+
+.session.is-hidden,
+.home.is-hidden {
+  display: none;
+}
+
+.session-bar {
+  position: absolute;
+  top: calc(0.85rem + env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 1.15rem;
+  z-index: 2;
+}
+
+.session-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--cream);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.42;
+  cursor: pointer;
+  padding: 0.45rem 0.2rem;
+}
+
+.session-btn:hover,
+.session-btn:focus-visible {
+  opacity: 0.88;
+}
+
+.session-btn:focus-visible {
+  outline: 1px solid var(--cream);
+  outline-offset: 3px;
+}
+
+.countdown {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: clamp(2.6rem, 9vw, 4.4rem);
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  color: var(--cream);
+  opacity: 0;
+  line-height: 1;
+  transition: opacity 900ms ease;
+}
+
+.countdown.is-on {
+  opacity: 0.92;
+}
+
+.stage {
+  position: relative;
+  width: min(58vmin, 22rem);
+  height: min(58vmin, 22rem);
+  display: grid;
+  place-items: center;
+}
+
+.halo,
+.bubble {
+  grid-area: 1 / 1;
+  border-radius: 50%;
+  transform: scale(var(--scale));
+  will-change: transform, background, box-shadow;
+}
+
+.halo {
+  width: 100%;
+  height: 100%;
+  background: var(--bubble-glow);
+  filter: blur(28px);
+  opacity: 0.9;
+  transition: filter 480ms ease, opacity 480ms ease;
+}
+
+.bubble {
+  width: 72%;
+  height: 72%;
+  background:
+    radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--bubble-fill) 70%, white 30%), var(--bubble-fill) 42%, color-mix(in srgb, var(--bubble-fill) 70%, black 30%));
+  box-shadow:
+    0 18px 50px color-mix(in srgb, var(--bubble-fill) 35%, transparent),
+    inset 0 -18px 30px color-mix(in srgb, black 22%, transparent),
+    inset 0 10px 18px color-mix(in srgb, white 22%, transparent);
+  transition: box-shadow 480ms ease, filter 480ms ease;
+}
+
+body.is-foreshadow .halo,
+.halo.is-foreshadow {
+  filter: blur(24px) brightness(1.14);
+  opacity: 1;
+}
+
+body.is-foreshadow .bubble,
+.bubble.is-foreshadow {
+  filter: brightness(1.06);
+  box-shadow:
+    0 18px 58px color-mix(in srgb, var(--bubble-fill) 48%, transparent),
+    inset 0 -18px 30px color-mix(in srgb, black 22%, transparent),
+    inset 0 10px 18px color-mix(in srgb, white 28%, transparent);
+}
+
+body.is-session .atmosphere {
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 48%, var(--atmosphere), transparent 68%),
+    var(--ink);
+}
+
+body.is-paused .session-btn#pause-btn {
+  opacity: 0.86;
+}
+
+body.is-complete .countdown,
+body.is-complete .countdown.is-on {
+  opacity: 0.38;
+  transition: opacity 1600ms ease;
+}
+
+body.is-complete .stage {
+  opacity: 0.6;
+  transition: opacity 1400ms ease, filter 1400ms ease;
+}
+
+body.is-complete .bubble,
+body.is-complete .halo {
+  filter: saturate(0.85);
+}
+
+body.is-complete .session-bar {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 700ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .halo,
+  .bubble {
+    transform: scale(0.72);
+    will-change: opacity, background, box-shadow;
+  }
+
+  .halo {
+    opacity: calc(0.5 + 0.5 * var(--bubble-opacity, 1));
+  }
+
+  .bubble {
+    opacity: var(--bubble-opacity, 1);
+  }
+
+  .atmosphere,
+  .countdown,
+  .pattern,
+  .start,
+  .stage {
+    transition-duration: 280ms;
+  }
+}
+
+@media (max-width: 420px) {
+  .home {
+    gap: 1.55rem;
+  }
+
+  .pattern {
+    min-height: 6.4rem;
+    border-radius: 1.15rem;
+  }
+}

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0e0d0b" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Breathe" />
+    <title>Breathe</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="atmosphere" id="atmosphere" aria-hidden="true"></div>
+
+    <main id="home" class="screen home">
+      <header class="brand">
+        <h1>breathe</h1>
+        <p>five minutes</p>
+        <p class="whisper" id="whisper" hidden></p>
+      </header>
+
+      <div
+        class="patterns"
+        id="patterns"
+        role="listbox"
+        aria-label="Breathing patterns"
+      ></div>
+
+      <p class="technique" id="technique"></p>
+
+      <button type="button" class="start" id="start">Start</button>
+
+      <div class="prefs">
+        <label class="pref">
+          <input type="checkbox" id="pref-timer" />
+          Always show timer
+        </label>
+        <label class="pref">
+          <input type="checkbox" id="pref-audio" />
+          Soft audio
+        </label>
+        <label class="pref">
+          <input type="checkbox" id="pref-haptics" />
+          Haptics
+        </label>
+      </div>
+    </main>
+
+    <div id="session" class="screen session is-hidden" hidden>
+      <div class="session-bar">
+        <button type="button" class="session-btn" id="pause-btn">Pause</button>
+        <button type="button" class="session-btn" id="end-btn">End</button>
+      </div>
+      <div class="stage">
+        <div class="halo" id="halo" aria-hidden="true"></div>
+        <div class="bubble" id="bubble" aria-hidden="true"></div>
+      </div>
+      <div class="countdown" id="countdown">5:00</div>
+    </div>
+
+    <script src="protocols.js"></script>
+    <script src="engine.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
