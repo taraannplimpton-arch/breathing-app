@@ -50,7 +50,7 @@ Timer, audio, and haptics default off (the timer is hidden most of the time unle
 
 **Soft audio** is a continuous swell/fade tone tied to inhale and exhale — not a metronome beep. It starts on the Start gesture (browsers block autoplay), and mutes on Pause or End.
 
-**Haptics** is a light `navigator.vibrate` on phase change when the browser supports it. No vibration if the toggle is off or the API is missing.
+**Haptics** is a light `navigator.vibrate` on phase change when the browser supports it (typical Android Chrome). iOS Safari / Add-to-Home-Screen does not implement vibrate, so the toggle is disabled and labeled unavailable on iPhone; **Soft audio** is the iPhone cue. No vibration if the toggle is off.
 
 Home also shows one short technique line for the selected pattern (never during the session). Rest is nose inhale, short nose top-up, long mouth exhale — not nose-only. Energy and HRV stay nose in and nose out. Focus (box) is nose for inhale, hold, exhale, and hold.
 

@@ -256,6 +256,15 @@ body[data-mood="bright"] .atmosphere {
   height: 0.85rem;
 }
 
+.pref.is-unavailable {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.pref.is-unavailable input {
+  pointer-events: none;
+}
+
 .start {
   appearance: none;
   border: 0;

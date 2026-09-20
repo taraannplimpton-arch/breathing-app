@@ -300,6 +300,20 @@ assert(!/planGlimpses\(SESSION_MS\)/.test(js), "glimpse planning must not freeze
 assert(js.includes("AudioContext") && js.includes("vibrate"), "audio and haptics paths must exist");
 assert(js.includes("startAudio") && js.includes("muteAudio") && js.includes("stopAudio"), "audio must start on gesture and mute on pause/end");
 
+const vibrateSupportCheck = 'typeof navigator !== "undefined" && typeof navigator.vibrate === "function"';
+assert(js.includes(vibrateSupportCheck), "app.js must detect vibrate support at load with the specified typeof check");
+const supportCheckIdx = js.indexOf(vibrateSupportCheck);
+const maybeHapticIdx = js.indexOf("function maybeHaptic");
+assert(supportCheckIdx !== -1 && (maybeHapticIdx === -1 || supportCheckIdx < maybeHapticIdx), "vibrate support must be computed once at load, not only inside maybeHaptic");
+assert(/prefHapticsEl\.disabled\s*=\s*true/.test(js), "unsupported path must disable the haptics checkbox");
+assert(/not available on this device|not supported|iPhone not supported/i.test(js), "unsupported path must relabel haptics as unavailable");
+assert(/prefHapticsEl\.checked\s*=\s*false/.test(js), "unsupported path must not leave a stored-on haptics preference looking enabled");
+assert(/if\s*\(\s*hapticsSupported\s*\)[\s\S]{0,80}navigator\.vibrate/.test(js), "navigator.vibrate must stay gated by the load-time support result");
+assert(/first \|\| clock\.isPaused\(\) \|\| completing \|\| !prefs\.haptics/.test(js), "supported haptic path must still skip first paint, pause, complete, and toggle-off");
+assert(/navigator\.vibrate\(\s*12\s*\)/.test(js), "supported path must still light-vibrate on phase change");
+assert(/iOS Safari/i.test(readme) && /Add-to-Home-Screen/i.test(readme) && /does not implement vibrate|no vibrate|not implement vibrate/i.test(readme), "README must document that iOS Safari / Add-to-Home-Screen does not implement vibrate");
+assert(/Soft audio[\s\S]{0,80}iPhone cue|iPhone cue[\s\S]{0,80}Soft audio/i.test(readme), "README must document Soft audio as the iPhone cue");
+
 const guilt = /(streak|shame|guilt|you failed|you missed|incomplete session|keep going|don't give up|try again|you stopped)/i;
 assert(!guilt.test(html) && !guilt.test(js), "End must not use guilt, streak, or shame copy");
 

@@ -41,6 +41,9 @@
   const prefTimerEl = document.getElementById("pref-timer");
   const prefAudioEl = document.getElementById("pref-audio");
   const prefHapticsEl = document.getElementById("pref-haptics");
+  const prefHapticsLabelEl = document.getElementById("pref-haptics-label");
+  const hapticsSupported =
+    typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
 
   let clock = createSessionClock(SESSION_MS);
   const prefs = {
@@ -124,6 +127,26 @@
     }
   }
 
+  function applyHapticsAvailability() {
+    if (!prefHapticsEl) {
+      return;
+    }
+    if (hapticsSupported) {
+      prefHapticsEl.disabled = false;
+      return;
+    }
+    prefs.haptics = false;
+    prefHapticsEl.checked = false;
+    prefHapticsEl.disabled = true;
+    const wrap = prefHapticsEl.closest(".pref");
+    if (wrap) {
+      wrap.classList.add("is-unavailable");
+    }
+    if (prefHapticsLabelEl) {
+      prefHapticsLabelEl.textContent = "Haptics (not available on this device)";
+    }
+  }
+
   function loadPrefs() {
     prefs.alwaysTimer = readPref(PREF_KEYS.alwaysTimer);
     prefs.audio = readPref(PREF_KEYS.audio);
@@ -132,6 +155,7 @@
     prefTimerEl.checked = prefs.alwaysTimer;
     prefAudioEl.checked = prefs.audio;
     prefHapticsEl.checked = prefs.haptics;
+    applyHapticsAvailability();
     syncDurationUi();
   }
 
@@ -330,7 +354,7 @@
     if (first || clock.isPaused() || completing || !prefs.haptics) {
       return;
     }
-    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+    if (hapticsSupported) {
       navigator.vibrate(12);
     }
   }
@@ -573,6 +597,11 @@
     writePref(PREF_KEYS.audio, prefs.audio);
   });
   prefHapticsEl.addEventListener("change", function () {
+    if (!hapticsSupported) {
+      prefHapticsEl.checked = false;
+      prefs.haptics = false;
+      return;
+    }
     prefs.haptics = prefHapticsEl.checked;
     writePref(PREF_KEYS.haptics, prefs.haptics);
   });
@@ -654,6 +683,7 @@
     PATTERNS: PATTERNS,
     engine: engine,
     prefs: prefs,
+    hapticsSupported: hapticsSupported,
   };
 
   const mq = motionQuery();
