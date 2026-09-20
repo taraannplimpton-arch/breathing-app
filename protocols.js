@@ -1,6 +1,7 @@
 (function (root) {
   const BREATHING = {
     SESSION_MS: 5 * 60 * 1000,
+    DURATION_MINUTES: [1, 2, 5, 10],
     MIN_SCALE: 0.42,
     MAX_SCALE: 1,
     PATTERNS: {
@@ -9,9 +10,8 @@
         homeLabel: "Rest",
         protocol: "2–1–6",
         mood: "calm",
-        technique: "Double inhale, long exhale",
-        // Cyclic sighing loop that fits a calm 5:00 session (9s cycle).
-        // 2s nasal inhale, 1s shorter nasal top-up, 6s mouth exhale.
+        technique: "Nose inhale, short nose top-up, long mouth exhale",
+        // Cyclic sighing loop (9s cycle): 2s nasal inhale, 1s nasal top-up, 6s mouth exhale.
         phases: [
           { id: "inhale", seconds: 2 },
           { id: "inhale2", seconds: 1 },
@@ -28,7 +28,7 @@
         homeLabel: "Energy",
         protocol: "4–2",
         mood: "bright",
-        technique: "Nose inhale, shorter out",
+        technique: "Nose inhale and nose exhale (shorter out)",
         phases: [
           { id: "inhale", seconds: 4 },
           { id: "exhale", seconds: 2 },
@@ -43,7 +43,7 @@
         homeLabel: "HRV",
         protocol: "5–5",
         mood: "steady",
-        technique: "Nose inhale, soft belly",
+        technique: "Nose inhale and nose exhale, soft belly",
         phases: [
           { id: "inhale", seconds: 5 },
           { id: "exhale", seconds: 5 },
@@ -58,7 +58,7 @@
         homeLabel: "Focus",
         protocol: "Box",
         mood: "steady",
-        technique: "Even inhale, hold, exhale, hold",
+        technique: "Nose inhale, nose hold, nose exhale, nose hold — all through the nose",
         phases: [
           { id: "inhale", seconds: 4 },
           { id: "hold", seconds: 4 },

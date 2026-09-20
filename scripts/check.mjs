@@ -27,8 +27,13 @@ function nearly(actual, expected, eps, message) {
   assert(Math.abs(actual - expected) <= eps, message + " (got " + actual + ", expected ~" + expected + ")");
 }
 
-assert(breathing.SESSION_MS === 5 * 60 * 1000, "SESSION_MS must be exactly 5 minutes");
+assert(breathing.SESSION_MS === 5 * 60 * 1000, "SESSION_MS default must remain 5 minutes");
 assert(engine.SESSION_MS === breathing.SESSION_MS, "engine SESSION_MS must match protocol data");
+assert(JSON.stringify(breathing.DURATION_MINUTES) === JSON.stringify([1, 2, 5, 10]), "allowed durations must be exactly 1, 2, 5, and 10 minutes");
+assert(engine.formatTime(breathing.SESSION_MS) === "5:00", "default remaining display is 5:00");
+assert(engine.formatTime(60 * 1000) === "1:00", "1-minute remaining formats as 1:00");
+assert(engine.formatTime(2 * 60 * 1000) === "2:00", "2-minute remaining formats as 2:00");
+assert(engine.formatTime(10 * 60 * 1000) === "10:00", "10-minute remaining formats as 10:00");
 assert(breathing.MIN_SCALE < breathing.MAX_SCALE, "bubble must have room to grow");
 assert(Object.keys(breathing.PATTERNS).length === 4, "there must be exactly four patterns");
 
@@ -71,6 +76,22 @@ assert(engine.isExhalePhase(rest.phases[2]), "Rest phase 2 must be exhale");
 assert(rest.phases[1].seconds < rest.phases[0].seconds, "second Rest inhale must be shorter than the first");
 assert(rest.phases[2].seconds > rest.phases[0].seconds, "Rest exhale must be longer than the first inhale");
 assert(rest.phases[0].seconds === 2 && rest.phases[1].seconds === 1 && rest.phases[2].seconds === 6, "Rest timings must be 2s, 1s, 6s");
+
+const restTech = rest.technique || "";
+const energyTech = breathing.PATTERNS.energy.technique || "";
+const hrvTech = breathing.PATTERNS.hrv.technique || "";
+const focusTech = breathing.PATTERNS.focus.technique || "";
+assert(/nose/i.test(restTech) && /mouth/i.test(restTech) && /exhale/i.test(restTech), "Rest technique must state nose inhale and mouth exhale");
+assert(/top-up/i.test(restTech), "Rest technique must mention the short nose top-up");
+assert(!/nose-only/i.test(restTech), "Rest technique must not be described as nose-only");
+assert(/nose inhale/i.test(energyTech) && /nose exhale/i.test(energyTech), "Energy technique must be nose inhale and nose exhale");
+assert(/shorter/i.test(energyTech), "Energy technique must note the shorter exhale");
+assert(/nose inhale/i.test(hrvTech) && /nose exhale/i.test(hrvTech) && /belly/i.test(hrvTech), "HRV technique must be nose inhale and nose exhale, soft belly");
+assert(/nose inhale/i.test(focusTech) && /nose hold/i.test(focusTech) && /nose exhale/i.test(focusTech), "Focus technique must keep inhale, hold, and exhale on the nose");
+assert(/all through the nose/i.test(focusTech), "Focus technique must say the whole box is through the nose");
+assert(/mouth exhale/i.test(readme) && /Do not breathe this pattern nose-only|not nose-only/i.test(readme), "README Rest notes must make the mouth exhale explicit and must not read as nose-only");
+assert(/Nose inhale and nose exhale/i.test(readme), "README Energy/HRV notes must state nose inhale and nose exhale");
+assert(/all through the nose/i.test(readme) && /nose inhale, nose hold, nose exhale, nose hold/i.test(readme), "README Focus notes must keep the box on the nose");
 
 for (const pattern of Object.values(breathing.PATTERNS)) {
   const colorKeys = new Set(pattern.phases.map(function (phase) {
@@ -131,6 +152,18 @@ assert(clock.elapsed(now) === elapsedBeforePause + 2000, "resume must continue f
 assert(clock.remaining(now) === remainingBeforePause - 2000, "remaining should keep counting down after resume");
 assert(clock.elapsed(now) !== 0 && clock.remaining(now) !== breathing.SESSION_MS, "resume must not restart the session");
 
+breathing.DURATION_MINUTES.forEach(function (minutes) {
+  const ms = minutes * 60 * 1000;
+  const timed = engine.createSessionClock(ms);
+  const t0 = 250;
+  timed.start(t0);
+  assert(timed.remaining(t0) === ms, minutes + "-minute clock remaining at t=0 must be " + ms + "ms");
+  assert(timed.elapsed(t0) === 0, minutes + "-minute clock elapsed at t=0 must be 0");
+  assert(timed.remaining(t0 + ms) === 0, minutes + "-minute session must complete at " + ms + "ms (remaining 0)");
+  assert(timed.elapsed(t0 + ms) === ms, minutes + "-minute elapsed at session end must equal duration");
+  assert(timed.remaining(t0 + Math.floor(ms / 2)) === ms - Math.floor(ms / 2), minutes + "-minute remaining must track the selected length, not a hard-coded 5:00");
+});
+
 const midNow = now;
 clock.stop();
 assert(clock.elapsed(midNow + 50) === 0, "stop/end resets the clock");
@@ -182,6 +215,38 @@ const threeMids = engine.planGlimpses(breathing.SESSION_MS, rng([0.9, 0.15, 0.4,
   assert(index === 0 ? mids.length === 2 : mids.length === 3, "rng should be able to pick both 2 and 3 mids");
 });
 
+[60 * 1000, 2 * 60 * 1000].forEach(function (ms) {
+  const label = ms / 60000 + " min";
+  const seeds = [
+    [0.1, 0.2, 0.55, 0.8],
+    [0.9, 0.15, 0.4, 0.7],
+    [0.01, 0.99, 0.3, 0.6],
+  ];
+  seeds.forEach(function (seed) {
+    const schedule = engine.planGlimpses(ms, rng(seed));
+    const start = schedule.windows.find(function (window) {
+      return window.type === "start";
+    });
+    const end = schedule.windows.find(function (window) {
+      return window.type === "end";
+    });
+    assert(Boolean(start) && start.start === 0, label + " glimpse schedule must include a start window at 0");
+    assert(Boolean(end), label + " glimpse schedule must include a near-end window");
+    assert(schedule.windows.length >= 2 && schedule.windows.length <= 5, label + " must stay at most ~4–5 glimpses");
+    schedule.windows.forEach(function (window) {
+      assert(window.start >= 0 && window.end <= ms, label + " glimpse must stay inside the session");
+      assert(window.start < window.end, label + " glimpse window must have duration");
+      assert(window.end <= ms, label + " must not run past 0:00");
+    });
+    const endMid = (end.start + end.end) / 2;
+    const remainingAtEnd = ms - endMid;
+    assert(remainingAtEnd > 0, label + " near-end glimpse must sit before 0:00");
+    assert(end.start > ms * 0.5, label + " near-end glimpse must be in the second half of the session");
+    assert(engine.isCountdownVisible(0, schedule, false), label + " timer should show at start");
+    assert(engine.isCountdownVisible(end.start + 10, schedule, false), label + " timer should show in the end window");
+  });
+});
+
 assert(engine.FORESHADOW_MS >= 400 && engine.FORESHADOW_MS <= 600, "foreshadow window must be 0.4–0.6s");
 const inhaleMs = energy.phases[0].seconds * 1000;
 const foreshadowOn = engine.phaseAt(energy, inhaleMs - engine.FORESHADOW_MS);
@@ -210,7 +275,10 @@ assert(!/\b(inhale|exhale|hold|breathe)\b/i.test(sessionChunk), "session markup 
 assert(!/id="technique"/.test(sessionChunk), "technique line must not be in the session");
 assert(/id="home"/.test(html) && /id="start"/.test(html), "home needs a Start control");
 assert(/id="technique"/.test(html), "home needs a technique line");
-assert(/Double inhale, long exhale/.test(js) || /Double inhale, long exhale/.test(readFileSync(path.join(root, "protocols.js"), "utf8")), "Rest technique must mention double inhale + long exhale");
+assert(/id="durations"/.test(html), "home needs a duration control");
+assert(/data-minutes="1"/.test(html) && /data-minutes="2"/.test(html) && /data-minutes="5"/.test(html) && /data-minutes="10"/.test(html), "duration control must list 1, 2, 5, and 10 minutes");
+assert(/data-minutes="5"[^>]*aria-checked="true"|class="duration is-selected"[^>]*data-minutes="5"/.test(html), "5 minutes must be the default selected duration in markup");
+assert(/>5:00</.test(html), "default remaining in markup is 5:00");
 assert(/id="pref-timer"/.test(html) && /id="pref-audio"/.test(html) && /id="pref-haptics"/.test(html), "home needs timer, audio, and haptics toggles");
 assert(!/id="pref-timer"[^>]*checked/.test(html), "Always show timer must default off");
 assert(!/id="pref-audio"[^>]*checked/.test(html), "audio must default off");
@@ -225,6 +293,10 @@ assert(engineSrc.includes("phaseAt") && engineSrc.includes("scaleFor"), "bubble 
 assert(js.includes("keydown") && js.includes("Escape") && js.includes(" "), "Space and Escape handling must exist");
 const persistSrc = js + engineSrc;
 assert(js.includes("localStorage") && persistSrc.includes("breathe.alwaysTimer") && persistSrc.includes("breathe.audio") && persistSrc.includes("breathe.haptics"), "toggles must persist via localStorage keys");
+assert(engine.PREF_KEYS.duration === "breathe.duration" && persistSrc.includes("breathe.duration"), "selected duration must persist in localStorage");
+assert(/createSessionClock\(ms\)/.test(js) && /planGlimpses\(ms\)/.test(js), "session clock and glimpses must use the selected duration");
+assert(!/countdownEl\.textContent = "5:00"/.test(js), "home/session countdown must not hard-code 5:00");
+assert(!/planGlimpses\(SESSION_MS\)/.test(js), "glimpse planning must not freeze the default 5:00 length");
 assert(js.includes("AudioContext") && js.includes("vibrate"), "audio and haptics paths must exist");
 assert(js.includes("startAudio") && js.includes("muteAudio") && js.includes("stopAudio"), "audio must start on gesture and mute on pause/end");
 
@@ -240,6 +312,8 @@ assert(existsSync(path.join(root, "favicon.svg")), "favicon.svg must remain");
 
 assert(/Pause/.test(readme) && /Resume/.test(readme) && /Escape/.test(readme) && /Space/.test(readme), "README must document Pause/Resume/End and shortcuts");
 assert(/Always show timer/.test(readme) && /breathe\.alwaysTimer/.test(readme), "README must document the timer toggle and persistence");
+assert(/breathe\.duration/.test(readme) && /1, 2, 5, or 10 minutes/.test(readme), "README must document selectable 1/2/5/10-minute sessions");
+assert(!/Each session is exactly five minutes/.test(readme), "README must not claim every session is exactly five minutes");
 assert(/Soft audio/.test(readme) && /Haptics/.test(readme), "README must document audio and haptics toggles");
 assert(/Balban/.test(readme) && /2023/.test(readme) && /cyclic sighing/i.test(readme), "README must cite Balban et al. 2023 / cyclic sighing");
 assert(/First nasal inhale \| 2/.test(readme) && /Second nasal top-up \| 1/.test(readme) && /Long mouth exhale \| 6/.test(readme), "README must document Rest seconds");
@@ -254,4 +328,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log("ok — 4 protocols, 5:00 sessions, cyclic-sigh Rest, interruptible UX, PWA shell");
+console.log("ok — 4 protocols, 1/2/5/10-minute sessions, cyclic-sigh Rest, interruptible UX, PWA shell");

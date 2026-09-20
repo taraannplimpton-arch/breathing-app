@@ -22,7 +22,7 @@
     <main id="home" class="screen home">
       <header class="brand">
         <h1>breathe</h1>
-        <p>five minutes</p>
+        <p id="tagline">five minutes</p>
         <p class="whisper" id="whisper" hidden></p>
       </header>
 
@@ -34,6 +34,13 @@
       ></div>
 
       <p class="technique" id="technique"></p>
+
+      <div class="durations" id="durations" role="radiogroup" aria-label="Session length">
+        <button type="button" class="duration" role="radio" data-minutes="1" aria-checked="false">1 min</button>
+        <button type="button" class="duration" role="radio" data-minutes="2" aria-checked="false">2 min</button>
+        <button type="button" class="duration is-selected" role="radio" data-minutes="5" aria-checked="true">5 min</button>
+        <button type="button" class="duration" role="radio" data-minutes="10" aria-checked="false">10 min</button>
+      </div>
 
       <button type="button" class="start" id="start">Start</button>
 

@@ -14,6 +14,7 @@
     alwaysTimer: "breathe.alwaysTimer",
     audio: "breathe.audio",
     haptics: "breathe.haptics",
+    duration: "breathe.duration",
   };
 
   function cycleMs(pattern) {
@@ -261,19 +262,11 @@
     };
   }
 
-  function planGlimpses(sessionMs, random) {
-    const duration = sessionMs == null ? SESSION_MS : sessionMs;
-    const rand = typeof random === "function" ? random : Math.random;
-    const windows = [];
-    windows.push({ type: "start", start: 0, end: START_GLIMPSE_MS });
-
-    const midCount = rand() < 0.5 ? 2 : 3;
-    const zoneStart = 22000;
-    const zoneEnd = Math.max(zoneStart + 40000, duration - 52000);
-    const minGap = 28000;
+  function placeMidPoints(midCount, zoneStart, zoneEnd, minGap, rand) {
     const points = [];
+    const span = Math.max(0, zoneEnd - zoneStart);
     for (let i = 0; i < midCount; i += 1) {
-      points.push(zoneStart + rand() * Math.max(0, zoneEnd - zoneStart));
+      points.push(zoneStart + rand() * span);
     }
     points.sort(function (a, b) {
       return a - b;
@@ -290,13 +283,54 @@
         cursor = points[i] - minGap;
       }
     }
-    points.forEach(function (point) {
+    return points;
+  }
+
+  function planGlimpses(sessionMs, random) {
+    const duration = sessionMs == null ? SESSION_MS : sessionMs;
+    const rand = typeof random === "function" ? random : Math.random;
+    const windows = [];
+    windows.push({ type: "start", start: 0, end: Math.min(START_GLIMPSE_MS, duration) });
+
+    const longSession = duration >= 4 * 60 * 1000;
+    const midCount = longSession
+      ? rand() < 0.5
+        ? 2
+        : 3
+      : duration >= 90 * 1000
+        ? rand() < 0.5
+          ? 1
+          : 2
+        : rand() < 0.4
+          ? 0
+          : 1;
+
+    const zoneStart = longSession
+      ? 22000
+      : Math.max(windows[0].end + 1200, Math.round(duration * 0.18));
+    const minGap = longSession ? 28000 : Math.max(8000, Math.round(duration * 0.16));
+    const endRemaining = longSession
+      ? END_REMAINING_MS
+      : Math.max(6000, Math.round(duration * 0.12));
+    const endStart = Math.max(windows[0].end + 400, duration - endRemaining - 800);
+    const zoneEnd = longSession
+      ? Math.max(zoneStart + 40000, duration - 52000)
+      : Math.max(zoneStart, endStart - 800);
+
+    placeMidPoints(midCount, zoneStart, zoneEnd, minGap, rand).forEach(function (point) {
       const start = Math.max(zoneStart, point);
-      windows.push({ type: "mid", start: start, end: start + GLIMPSE_MS });
+      const end = start + GLIMPSE_MS;
+      if (start < 0 || end > duration || start >= endStart) {
+        return;
+      }
+      windows.push({ type: "mid", start: start, end: end });
     });
 
-    const endStart = duration - END_REMAINING_MS - 800;
-    windows.push({ type: "end", start: endStart, end: endStart + GLIMPSE_MS });
+    windows.push({
+      type: "end",
+      start: endStart,
+      end: Math.min(duration, endStart + GLIMPSE_MS),
+    });
 
     return { windows: windows, midCount: midCount };
   }

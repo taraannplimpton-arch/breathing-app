@@ -1,7 +1,14 @@
 (function () {
   "use strict";
 
-  const { SESSION_MS, MIN_SCALE, PATTERNS } = window.BREATHING;
+  const { SESSION_MS, MIN_SCALE, PATTERNS, DURATION_MINUTES } = window.BREATHING;
+  const ALLOWED_MINUTES = DURATION_MINUTES || [1, 2, 5, 10];
+  const DURATION_WORDS = {
+    1: "one minute",
+    2: "two minutes",
+    5: "five minutes",
+    10: "ten minutes",
+  };
   const engine = window.BREATHING_ENGINE;
   const {
     phaseAt,
@@ -29,11 +36,13 @@
   const endBtn = document.getElementById("end-btn");
   const techniqueEl = document.getElementById("technique");
   const whisperEl = document.getElementById("whisper");
+  const taglineEl = document.getElementById("tagline");
+  const durationsEl = document.getElementById("durations");
   const prefTimerEl = document.getElementById("pref-timer");
   const prefAudioEl = document.getElementById("pref-audio");
   const prefHapticsEl = document.getElementById("pref-haptics");
 
-  const clock = createSessionClock(SESSION_MS);
+  let clock = createSessionClock(SESSION_MS);
   const prefs = {
     alwaysTimer: false,
     audio: false,
@@ -41,6 +50,7 @@
   };
 
   let selectedId = "rest";
+  let selectedMinutes = 5;
   let rafId = 0;
   let completing = false;
   let glimpseSchedule = null;
@@ -73,13 +83,56 @@
     }
   }
 
+  function selectedSessionMs() {
+    return selectedMinutes * 60 * 1000;
+  }
+
+  function readDurationMinutes() {
+    try {
+      const raw = window.localStorage.getItem(PREF_KEYS.duration);
+      const minutes = Number(raw);
+      if (ALLOWED_MINUTES.indexOf(minutes) !== -1) {
+        return minutes;
+      }
+    } catch (err) {
+      /* private mode */
+    }
+    return 5;
+  }
+
+  function writeDurationMinutes(minutes) {
+    try {
+      window.localStorage.setItem(PREF_KEYS.duration, String(minutes));
+    } catch (err) {
+      /* private mode */
+    }
+  }
+
+  function syncDurationUi() {
+    const buttons = durationsEl ? durationsEl.querySelectorAll("[data-minutes]") : [];
+    Array.prototype.forEach.call(buttons, function (button) {
+      const minutes = Number(button.getAttribute("data-minutes"));
+      const on = minutes === selectedMinutes;
+      button.classList.toggle("is-selected", on);
+      button.setAttribute("aria-checked", on ? "true" : "false");
+    });
+    if (taglineEl) {
+      taglineEl.textContent = DURATION_WORDS[selectedMinutes] || "five minutes";
+    }
+    if (!clock.isRunning() && !clock.isPaused() && !completing) {
+      countdownEl.textContent = formatTime(selectedSessionMs());
+    }
+  }
+
   function loadPrefs() {
     prefs.alwaysTimer = readPref(PREF_KEYS.alwaysTimer);
     prefs.audio = readPref(PREF_KEYS.audio);
     prefs.haptics = readPref(PREF_KEYS.haptics);
+    selectedMinutes = readDurationMinutes();
     prefTimerEl.checked = prefs.alwaysTimer;
     prefAudioEl.checked = prefs.audio;
     prefHapticsEl.checked = prefs.haptics;
+    syncDurationUi();
   }
 
   function motionQuery() {
@@ -284,9 +337,10 @@
 
   function paint(now) {
     const pattern = currentPattern();
-    const elapsed = completing ? SESSION_MS : clock.elapsed(now);
+    const limit = clock.sessionMs;
+    const elapsed = completing ? limit : clock.elapsed(now);
     const remaining = completing ? 0 : clock.remaining(now);
-    const snapshot = phaseAt(pattern, Math.min(elapsed, SESSION_MS - 1));
+    const snapshot = phaseAt(pattern, Math.min(elapsed, Math.max(0, limit - 1)));
     const scale = completing
       ? MIN_SCALE
       : scaleFor(snapshot, { reducedMotion: reducedMotion });
@@ -311,6 +365,7 @@
   }
 
   function showHome(opts) {
+    const endedMs = opts && opts.sessionMs != null ? opts.sessionMs : clock.sessionMs;
     completing = false;
     clock.stop();
     cancelFrame();
@@ -324,12 +379,12 @@
     sessionEl.classList.add("is-hidden");
     homeEl.hidden = false;
     homeEl.classList.remove("is-hidden");
-    countdownEl.textContent = "5:00";
+    countdownEl.textContent = formatTime(selectedSessionMs());
     countdownEl.classList.remove("is-on");
     delete bubbleEl.dataset.phase;
     delete bubbleEl.dataset.pattern;
     const elapsedMs = opts && opts.elapsedMs;
-    if (elapsedMs > 1200 && elapsedMs < SESSION_MS - 400) {
+    if (elapsedMs > 1200 && elapsedMs < endedMs - 400) {
       showWhisper(elapsedMs);
     } else {
       hideWhisper();
@@ -371,7 +426,9 @@
   function startSession() {
     completing = false;
     lastPhaseKey = "";
-    glimpseSchedule = planGlimpses(SESSION_MS);
+    const ms = selectedSessionMs();
+    clock = createSessionClock(ms);
+    glimpseSchedule = planGlimpses(ms);
     clock.start(performance.now());
     showSession();
     pauseBtn.textContent = "Pause";
@@ -433,7 +490,7 @@
       return;
     }
     const elapsedMs = clock.elapsed(performance.now());
-    showHome({ elapsedMs: elapsedMs });
+    showHome({ elapsedMs: elapsedMs, sessionMs: clock.sessionMs });
   }
 
   function sessionText() {
@@ -447,7 +504,8 @@
       return {
         screen: "home",
         patternId: selectedId,
-        remainingMs: SESSION_MS,
+        remainingMs: selectedSessionMs(),
+        durationMinutes: selectedMinutes,
         phaseId: null,
         scale: MIN_SCALE,
         paused: false,
@@ -455,9 +513,10 @@
         whisper: whisperEl.textContent,
       };
     }
-    const elapsed = completing ? SESSION_MS : clock.elapsed(now);
+    const limit = clock.sessionMs;
+    const elapsed = completing ? limit : clock.elapsed(now);
     const remaining = completing ? 0 : clock.remaining(now);
-    const snapshot = phaseAt(pattern, Math.min(elapsed, SESSION_MS - 1));
+    const snapshot = phaseAt(pattern, Math.min(elapsed, Math.max(0, limit - 1)));
     return {
       screen: completing ? "complete" : "session",
       patternId: selectedId,
@@ -470,6 +529,7 @@
       foreshadow: foreshadowActive(snapshot),
       sessionText: sessionText(),
       technique: techniqueEl.textContent,
+      durationMinutes: selectedMinutes,
     };
   }
 
@@ -487,6 +547,22 @@
       showHome();
     }
   });
+
+  if (durationsEl) {
+    durationsEl.addEventListener("click", function (event) {
+      const button = event.target.closest("[data-minutes]");
+      if (!button || clock.isRunning() || clock.isPaused() || completing) {
+        return;
+      }
+      const minutes = Number(button.getAttribute("data-minutes"));
+      if (ALLOWED_MINUTES.indexOf(minutes) === -1) {
+        return;
+      }
+      selectedMinutes = minutes;
+      writeDurationMinutes(minutes);
+      syncDurationUi();
+    });
+  }
 
   prefTimerEl.addEventListener("change", function () {
     prefs.alwaysTimer = prefTimerEl.checked;
@@ -564,6 +640,17 @@
       paint(performance.now());
     },
     SESSION_MS: SESSION_MS,
+    durationMinutes: function () {
+      return selectedMinutes;
+    },
+    setDurationMinutes: function (minutes) {
+      if (ALLOWED_MINUTES.indexOf(minutes) === -1) {
+        return;
+      }
+      selectedMinutes = minutes;
+      writeDurationMinutes(minutes);
+      syncDurationUi();
+    },
     PATTERNS: PATTERNS,
     engine: engine,
     prefs: prefs,
