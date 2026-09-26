@@ -1,7 +1,7 @@
 {
   "name": "Breathe",
   "short_name": "Breathe",
-  "description": "A five-minute breathing studio",
+  "description": "A calm breathing studio",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

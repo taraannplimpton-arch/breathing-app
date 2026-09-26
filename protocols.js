@@ -2,6 +2,7 @@
   const BREATHING = {
     SESSION_MS: 5 * 60 * 1000,
     DURATION_MINUTES: [1, 2, 5, 10],
+    QUICK_RESET_CYCLES: 3,
     MIN_SCALE: 0.42,
     MAX_SCALE: 1,
     PATTERNS: {
@@ -28,7 +29,8 @@
         homeLabel: "Energy",
         protocol: "4–2",
         mood: "bright",
-        technique: "Nose inhale and nose exhale (shorter out)",
+        technique: "Nose inhale and nose exhale (shorter out). Stop if you feel lightheaded. More air isn't better.",
+        maxMinutes: 1,
         phases: [
           { id: "inhale", seconds: 4 },
           { id: "exhale", seconds: 2 },
@@ -69,6 +71,22 @@
           inhale: { fill: "#7ec3ff", glow: "rgba(90, 170, 255, 0.5)", atmosphere: "#0d1a30" },
           hold: { fill: "#b7a6ff", glow: "rgba(170, 150, 255, 0.46)", atmosphere: "#161430" },
           exhale: { fill: "#1d4ed8", glow: "rgba(40, 80, 200, 0.4)", atmosphere: "#07101f" },
+        },
+      },
+      sleep: {
+        id: "sleep",
+        homeLabel: "Sleep",
+        protocol: "4–6",
+        mood: "calm",
+        technique: "Small breath, easy longer exhale. Counts fade once the rhythm settles.",
+        dropCountAfterCycles: 4,
+        phases: [
+          { id: "inhale", seconds: 4 },
+          { id: "exhale", seconds: 6 },
+        ],
+        colors: {
+          inhale: { fill: "#6d739e", glow: "rgba(90, 96, 150, 0.32)", atmosphere: "#07060c" },
+          exhale: { fill: "#1f2444", glow: "rgba(40, 46, 80, 0.22)", atmosphere: "#05050a" },
         },
       },
     },

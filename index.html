@@ -26,6 +26,13 @@
         <p class="whisper" id="whisper" hidden></p>
       </header>
 
+      <div class="needs" id="needs" role="listbox" aria-label="What do you need">
+        <button type="button" class="need" role="option" data-need="spike" aria-selected="false">Spike</button>
+        <button type="button" class="need" role="option" data-need="fog" aria-selected="false">Fog</button>
+        <button type="button" class="need" role="option" data-need="low-energy" aria-selected="false">Low energy</button>
+        <button type="button" class="need" role="option" data-need="sleep" aria-selected="false">Sleep</button>
+      </div>
+
       <div
         class="patterns"
         id="patterns"
@@ -41,7 +48,9 @@
         <button type="button" class="duration is-selected" role="radio" data-minutes="5" aria-checked="true">5 min</button>
         <button type="button" class="duration" role="radio" data-minutes="10" aria-checked="false">10 min</button>
       </div>
+      <p class="duration-note" id="duration-note" hidden></p>
 
+      <button type="button" class="quick-reset" id="quick-reset" aria-label="Quick Reset, about 30 seconds">Quick Reset</button>
       <button type="button" class="start" id="start">Start</button>
 
       <div class="prefs">
@@ -57,12 +66,26 @@
           <input type="checkbox" id="pref-haptics" />
           <span id="pref-haptics-label">Haptics</span>
         </label>
+        <label class="pref">
+          <input type="checkbox" id="pref-body-setup" checked />
+          Body setup before sessions
+        </label>
+        <label class="pref" id="pref-hum-wrap">
+          <input type="checkbox" id="pref-hum" />
+          Hum on the exhale
+        </label>
       </div>
     </main>
+
+    <div id="preroll" class="screen preroll is-hidden" hidden>
+      <p class="preroll-cue" id="preroll-cue"></p>
+      <p class="preroll-hint">Tap to skip</p>
+    </div>
 
     <div id="session" class="screen session is-hidden" hidden>
       <div class="session-bar">
         <button type="button" class="session-btn" id="pause-btn">Pause</button>
+        <button type="button" class="session-btn" id="ease-btn" aria-label="Easier">Ease</button>
         <button type="button" class="session-btn" id="end-btn">End</button>
       </div>
       <div class="stage">
@@ -70,6 +93,7 @@
         <div class="bubble" id="bubble" aria-hidden="true"></div>
       </div>
       <div class="countdown" id="countdown">5:00</div>
+      <p class="next-move" id="next-move" hidden>What's the smallest next move?</p>
     </div>
 
     <script src="protocols.js"></script>

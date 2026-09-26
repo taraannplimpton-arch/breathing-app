@@ -35,7 +35,8 @@ assert(engine.formatTime(60 * 1000) === "1:00", "1-minute remaining formats as 1
 assert(engine.formatTime(2 * 60 * 1000) === "2:00", "2-minute remaining formats as 2:00");
 assert(engine.formatTime(10 * 60 * 1000) === "10:00", "10-minute remaining formats as 10:00");
 assert(breathing.MIN_SCALE < breathing.MAX_SCALE, "bubble must have room to grow");
-assert(Object.keys(breathing.PATTERNS).length === 4, "there must be exactly four patterns");
+assert(Object.keys(breathing.PATTERNS).length === 5, "there must be exactly five patterns");
+assert(breathing.QUICK_RESET_CYCLES === 3, "Quick Reset must be 3 physiological sighs");
 
 const expected = {
   energy: [
@@ -86,9 +87,74 @@ assert(/top-up/i.test(restTech), "Rest technique must mention the short nose top
 assert(!/nose-only/i.test(restTech), "Rest technique must not be described as nose-only");
 assert(/nose inhale/i.test(energyTech) && /nose exhale/i.test(energyTech), "Energy technique must be nose inhale and nose exhale");
 assert(/shorter/i.test(energyTech), "Energy technique must note the shorter exhale");
+assert(/lightheaded/i.test(energyTech) && /More air isn't better/i.test(energyTech), "Energy technique must include a gentle lightheaded / more-air safety line");
+assert(breathing.PATTERNS.energy.maxMinutes === 1, "Energy must cap at 1 minute");
+assert(engine.effectiveMinutes(breathing.PATTERNS.energy, 5) === 1, "Energy effective minutes must cap 5 → 1");
+assert(engine.effectiveMinutes(breathing.PATTERNS.energy, 2) === 1, "Energy effective minutes must cap 2 → 1");
+assert(engine.effectiveMinutes(breathing.PATTERNS.energy, 10) === 1, "Energy effective minutes must cap 10 → 1");
+assert(engine.effectiveMinutes(breathing.PATTERNS.energy, 1) === 1, "Energy effective minutes must keep 1");
+assert(engine.effectiveMinutes(breathing.PATTERNS.rest, 5) === 5, "Rest must not inherit the Energy duration cap");
+assert(engine.effectiveMinutes(breathing.PATTERNS.sleep, 10) === 10, "Sleep must not inherit the Energy duration cap");
 assert(/nose inhale/i.test(hrvTech) && /nose exhale/i.test(hrvTech) && /belly/i.test(hrvTech), "HRV technique must be nose inhale and nose exhale, soft belly");
 assert(/nose inhale/i.test(focusTech) && /nose hold/i.test(focusTech) && /nose exhale/i.test(focusTech), "Focus technique must keep inhale, hold, and exhale on the nose");
 assert(/all through the nose/i.test(focusTech), "Focus technique must say the whole box is through the nose");
+
+const sleep = breathing.PATTERNS.sleep;
+assert(Boolean(sleep), "missing Sleep pattern");
+assert(sleep.mood === "calm", "Sleep atmosphere must be dim/calm like Rest");
+assert(sleep.dropCountAfterCycles === 4, "Sleep should drop the count after about 4 cycles");
+assert(sleep.phases.length === 2, "Sleep should be inhale then longer exhale");
+assert(sleep.phases[0].id === "inhale" && sleep.phases[0].seconds === 4, "Sleep inhale must be 4s");
+assert(sleep.phases[1].id === "exhale" && sleep.phases[1].seconds === 6, "Sleep exhale must be 6s");
+assert(engine.cycleMs(sleep) === 10000, "Sleep cycle must be 10s");
+assert(engine.dropCountAfterMs(sleep) === 40000, "Sleep drop-the-count must start at 40s");
+assert(engine.dropCountAfterMs(rest) == null, "Rest must not drop the count");
+const sleepTech = sleep.technique || "";
+assert(/Small breath/i.test(sleepTech) && /longer exhale/i.test(sleepTech) && /fade/i.test(sleepTech), "Sleep technique must mention small breath, longer exhale, and fading counts");
+nearly(engine.scaleFor(engine.phaseAt(sleep, 0)), breathing.MIN_SCALE, 0.02, "Sleep inhale should start near MIN_SCALE");
+nearly(engine.scaleFor(engine.phaseAt(sleep, 4000 - 1)), breathing.MAX_SCALE, 0.02, "Sleep inhale should end near MAX_SCALE");
+nearly(engine.scaleFor(engine.phaseAt(sleep, 10000 - 1)), breathing.MIN_SCALE, 0.02, "Sleep exhale should end near MIN_SCALE");
+
+assert(engine.quickResetMs(rest) === 27000, "Quick Reset must last 3 Rest cycles (27s)");
+assert(3 * engine.cycleMs(rest) === 27000, "three Rest sighs must be 27s");
+const qrClock = engine.createSessionClock(engine.quickResetMs(rest));
+const qrT0 = 100;
+qrClock.start(qrT0);
+assert(qrClock.remaining(qrT0) === 27000, "Quick Reset remaining at t=0 must be 27000ms");
+assert(qrClock.remaining(qrT0 + 27000) === 0, "Quick Reset must complete at 27s");
+
+function easeIds(pattern, level) {
+  return engine.easePhases(pattern, level).phases.map(function (phase) {
+    return [phase.id, phase.seconds];
+  });
+}
+assert(JSON.stringify(easeIds(sleep, 0)) === JSON.stringify([["inhale", 4], ["exhale", 6]]), "ease level 0 must be identity");
+assert(JSON.stringify(easeIds(sleep, 1)) === JSON.stringify([["inhale", 3], ["exhale", 5]]), "Sleep 4-6 eases to 3-5");
+assert(JSON.stringify(easeIds(sleep, 2)) === JSON.stringify([["inhale", 2], ["exhale", 4]]), "Sleep second ease is 2-4");
+assert(JSON.stringify(easeIds(breathing.PATTERNS.hrv, 1)) === JSON.stringify([["inhale", 4], ["exhale", 4]]), "HRV 5-5 eases to 4-4");
+assert(JSON.stringify(easeIds(breathing.PATTERNS.hrv, 2)) === JSON.stringify([["inhale", 3], ["exhale", 3]]), "HRV second ease is 3-3");
+assert(JSON.stringify(easeIds(breathing.PATTERNS.energy, 1).map(function (pair) { return pair[1]; })) === JSON.stringify([3, 2]), "Energy 4-2 eases to 3-2");
+assert(JSON.stringify(easeIds(breathing.PATTERNS.energy, 2).map(function (pair) { return pair[1]; })) === JSON.stringify([2, 2]), "Energy second ease floors exhale at 2");
+const focusEased = easeIds(breathing.PATTERNS.focus, 1);
+assert(focusEased.every(function (pair) { return pair[1] === 3; }), "box 4 eases to 3");
+assert(easeIds(breathing.PATTERNS.focus, 2).every(function (pair) { return pair[1] === 2; }), "box second ease is 2");
+assert(JSON.stringify(easeIds(rest, 1).map(function (pair) { return pair[1]; })) === JSON.stringify([2, 1, 5]), "Rest 2-1-6 eases to 2-1-5");
+assert(JSON.stringify(easeIds(rest, 2).map(function (pair) { return pair[1]; })) === JSON.stringify([2, 1, 4]), "Rest second ease is 2-1-4");
+assert(engine.easeSeconds(1, "inhale2", 2) === 1, "Rest top-up must stay 1s");
+assert(engine.easeSeconds(2, "inhale", 2) === 2, "no phase under 2s except the Rest top-up");
+const restPhasesBefore = JSON.stringify(rest.phases);
+engine.easePhases(rest, 2);
+assert(JSON.stringify(rest.phases) === restPhasesBefore, "easePhases must not mutate the original pattern");
+[1, 2].forEach(function (level) {
+  engine.easePhases(rest, level).phases.forEach(function (phase) {
+    const floor = phase.id === "inhale2" ? 1 : 2;
+    assert(phase.seconds >= floor, "eased " + phase.id + " must respect the " + floor + "s floor");
+  });
+});
+
+assert(engine.PREF_KEYS.bodySetup === "breathe.bodySetup", "body setup pref key must be breathe.bodySetup");
+assert(engine.PREF_KEYS.hum === "breathe.hum", "hum pref key must be breathe.hum");
+assert(engine.HUM_EXHALE_HZ > 100 && engine.HUM_EXHALE_HZ < engine.HUM_INHALE_HZ, "exhale hum must be a lower tone than the inhale swell");
 assert(/mouth exhale/i.test(readme) && /Do not breathe this pattern nose-only|not nose-only/i.test(readme), "README Rest notes must make the mouth exhale explicit and must not read as nose-only");
 assert(/Nose inhale and nose exhale/i.test(readme), "README Energy/HRV notes must state nose inhale and nose exhale");
 assert(/all through the nose/i.test(readme) && /nose inhale, nose hold, nose exhale, nose hold/i.test(readme), "README Focus notes must keep the box on the nose");
@@ -271,8 +337,13 @@ assert(/id="bubble"/.test(sessionChunk), "session needs a bubble");
 assert(/id="countdown"/.test(sessionChunk), "session needs a countdown");
 assert(/id="pause-btn"/.test(sessionChunk) && />Pause</.test(sessionChunk), "session needs a Pause control");
 assert(/id="end-btn"/.test(sessionChunk) && />End</.test(sessionChunk), "session needs an End control");
+assert(/id="ease-btn"/.test(sessionChunk) && /aria-label="Easier"/.test(sessionChunk), "session needs a minimal Ease control");
+assert(/What's the smallest next move\?/.test(sessionChunk), "completion line must live in the session markup");
+assert(/id="next-move"[^>]*hidden/.test(sessionChunk), "completion line must be hidden until the session completes");
+assert(!/<input|<textarea/i.test(sessionChunk), "completion must not include an input");
 assert(!/\b(inhale|exhale|hold|breathe)\b/i.test(sessionChunk), "session markup must not include breathing-phase words");
 assert(!/id="technique"/.test(sessionChunk), "technique line must not be in the session");
+assert(!/id="preroll"/.test(sessionChunk), "body-setup pre-roll must not sit inside the session screen");
 assert(/id="home"/.test(html) && /id="start"/.test(html), "home needs a Start control");
 assert(/id="technique"/.test(html), "home needs a technique line");
 assert(/id="durations"/.test(html), "home needs a duration control");
@@ -283,6 +354,16 @@ assert(/id="pref-timer"/.test(html) && /id="pref-audio"/.test(html) && /id="pref
 assert(!/id="pref-timer"[^>]*checked/.test(html), "Always show timer must default off");
 assert(!/id="pref-audio"[^>]*checked/.test(html), "audio must default off");
 assert(!/id="pref-haptics"[^>]*checked/.test(html), "haptics must default off");
+assert(/id="quick-reset"/.test(html) && /Quick Reset/.test(html), "home needs a prominent Quick Reset button");
+assert(/id="needs"/.test(html) && /data-need="spike"/.test(html) && /data-need="fog"/.test(html) && /data-need="low-energy"/.test(html) && /data-need="sleep"/.test(html), "home needs Spike / Fog / Low energy / Sleep need chips");
+assert(/>Spike</.test(html) && />Fog</.test(html) && />Low energy</.test(html), "need chips must use the Spike / Fog / Low energy labels");
+assert(/id="preroll"/.test(html) && /id="preroll-cue"/.test(html), "body-setup pre-roll screen must exist outside the session");
+assert(html.indexOf('id="preroll"') < html.indexOf('id="session"'), "pre-roll must come before the session screen");
+assert(/id="pref-body-setup"/.test(html) && /id="pref-body-setup"[^>]*checked/.test(html), "Body setup before sessions must default ON in markup");
+assert(/id="pref-hum"/.test(html) && !/id="pref-hum"[^>]*checked/.test(html), "Hum on the exhale must default off");
+assert(/id="duration-note"/.test(html), "Energy cap needs a duration note element");
+assert(/Feet/.test(js) && /Stack/.test(js) && /Hands/.test(js) && /Jaw/.test(js) && /Eyes/.test(js) && /Exhale/.test(js), "pre-roll cues must cycle Feet Stack Hands Jaw Eyes Exhale");
+assert(!/\b(Feet|Stack|Hands|Jaw)\b/.test(sessionChunk), "pre-roll cue words must not appear in the session screen");
 
 assert(css.includes("--scale"), "CSS must drive bubble scale from a variable");
 assert(/\.countdown[\s\S]{0,220}opacity[\s\S]{0,80}transition[\s\S]{0,40}opacity/.test(css.replace(/\n/g, " ")) || /transition:\s*opacity\s+9\d{2}ms/.test(css), "countdown must fade, not flash");
@@ -294,7 +375,25 @@ assert(js.includes("keydown") && js.includes("Escape") && js.includes(" "), "Spa
 const persistSrc = js + engineSrc;
 assert(js.includes("localStorage") && persistSrc.includes("breathe.alwaysTimer") && persistSrc.includes("breathe.audio") && persistSrc.includes("breathe.haptics"), "toggles must persist via localStorage keys");
 assert(engine.PREF_KEYS.duration === "breathe.duration" && persistSrc.includes("breathe.duration"), "selected duration must persist in localStorage");
+assert(persistSrc.includes("breathe.bodySetup") && persistSrc.includes("breathe.hum"), "body setup and hum prefs must persist");
+assert(/readPref\(\s*PREF_KEYS\.bodySetup\s*,\s*true\s*\)/.test(js), "body setup must treat a missing key as on");
 assert(/createSessionClock\(ms\)/.test(js) && /planGlimpses\(ms\)/.test(js), "session clock and glimpses must use the selected duration");
+assert(/effectiveMinutes\(currentPattern\(\),\s*selectedMinutes\)/.test(js), "session length must go through effectiveMinutes so Energy caps at 1 minute");
+assert(/PATTERN_ORDER = \["rest", "energy", "hrv", "focus", "sleep"\]/.test(js), "home pattern order must include Sleep as the fifth pattern");
+assert(/function startQuickReset/.test(js) && /sessionKind = "quick-reset"/.test(js) && /quickResetMs/.test(js), "Quick Reset must start a dedicated short Rest session");
+{
+  const qrStart = js.indexOf("function startQuickReset");
+  const qrEnd = js.indexOf("function pauseSession", qrStart);
+  const qrFn = qrStart >= 0 && qrEnd > qrStart ? js.slice(qrStart, qrEnd) : "";
+  assert(/startSession/.test(qrFn), "Quick Reset must call startSession");
+  assert(!/showPreroll/.test(qrFn), "Quick Reset must skip the body-setup pre-roll");
+}
+assert(/key === "e" \|\| key === "E"/.test(js) && /bumpEase|easeLevel/.test(js), "Ease needs an E keyboard shortcut");
+assert(/easePhases\(basePattern\(\),\s*easeLevel\)/.test(js) && /cycleOriginMs/.test(js), "Ease must apply from the next cycle via cycleOriginMs");
+assert(/Hum softly on the exhale/.test(js), "hum toggle must mention humming on the home technique line");
+assert(/triangle/.test(js) && /HUM_EXHALE_HZ/.test(js), "humming must switch the exhale tone when soft audio is on");
+assert(/dropCountAfterMs/.test(js), "Sleep must drop the on-screen count after the settle window");
+assert(/What's the smallest next move\?/.test(js) || /showNextMove/.test(js), "completion must reveal the next-move line");
 assert(!/countdownEl\.textContent = "5:00"/.test(js), "home/session countdown must not hard-code 5:00");
 assert(!/planGlimpses\(SESSION_MS\)/.test(js), "glimpse planning must not freeze the default 5:00 length");
 assert(js.includes("AudioContext") && js.includes("vibrate"), "audio and haptics paths must exist");
@@ -321,6 +420,8 @@ assert(/manifest\.webmanifest/.test(html), "HTML must link the web app manifest"
 assert(/sw\.js/.test(js), "app must register the service worker");
 assert(/"display"\s*:\s*"standalone"/.test(manifest), "manifest should be installable (standalone)");
 assert(sw.includes("caches") && sw.includes("index.html") && sw.includes("engine.js"), "service worker must cache the static app shell");
+assert(/const CACHE = "breathe-shell-v2"/.test(sw), "service worker cache name must bump to breathe-shell-v2");
+assert(!/const CACHE = "breathe-shell-v1"/.test(sw), "service worker must not keep the v1 cache name");
 assert(existsSync(path.join(root, "icon-192.png")) && existsSync(path.join(root, "icon-512.png")), "PWA icons must exist");
 assert(existsSync(path.join(root, "favicon.svg")), "favicon.svg must remain");
 
@@ -333,6 +434,15 @@ assert(/Balban/.test(readme) && /2023/.test(readme) && /cyclic sighing/i.test(re
 assert(/First nasal inhale \| 2/.test(readme) && /Second nasal top-up \| 1/.test(readme) && /Long mouth exhale \| 6/.test(readme), "README must document Rest seconds");
 assert(/Add to Home Screen/.test(readme) && /file:\/\//.test(readme) && /http\.server/.test(readme), "README must document PWA install vs file://");
 assert(/Manual checklist/.test(readme), "README must keep a manual checklist");
+assert(/Quick Reset/.test(readme) && /30 seconds|~30|about 30|three/.test(readme), "README must document Quick Reset");
+assert(/Sleep/.test(readme) && /4–6|4-6/.test(readme) && /drop the count|counts fade/i.test(readme), "README must document Sleep 4-6 and drop-the-count");
+assert(/one minute/.test(readme) && /lightheaded/.test(readme) && /More air isn't better/.test(readme), "README must document the Energy 1-minute cap and safety line");
+assert(/Body setup before sessions/.test(readme) && /breathe\.bodySetup/.test(readme), "README must document body setup and its localStorage key");
+assert(/Ease/.test(readme) && /`E`/.test(readme), "README must document Ease and the E shortcut");
+assert(/Spike/.test(readme) && /Fog/.test(readme) && /Low energy/.test(readme), "README must document pick-by-need chips");
+assert(/Hum on the exhale/.test(readme) && /breathe\.hum/.test(readme) && /Hum softly on the exhale/.test(readme), "README must document humming");
+assert(/What's the smallest next move\?/.test(readme), "README must document the completion prompt");
+assert(/`1`–`5`|1`–`5/.test(readme), "README keyboard table must include keys 1-5");
 
 if (failures.length) {
   console.error("check failed:");
@@ -342,4 +452,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log("ok — 4 protocols, 1/2/5/10-minute sessions, cyclic-sigh Rest, interruptible UX, PWA shell");
+console.log("ok — 5 protocols, Quick Reset, Energy cap, Sleep drop-count, ease, PWA shell");

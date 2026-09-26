@@ -15,12 +15,65 @@
     audio: "breathe.audio",
     haptics: "breathe.haptics",
     duration: "breathe.duration",
+    bodySetup: "breathe.bodySetup",
+    hum: "breathe.hum",
   };
+
+  const HUM_INHALE_HZ = 174.61;
+  const HUM_EXHALE_HZ = 123.47;
 
   function cycleMs(pattern) {
     return pattern.phases.reduce(function (sum, phase) {
       return sum + phase.seconds * 1000;
     }, 0);
+  }
+
+  function effectiveMinutes(pattern, selectedMinutes) {
+    const requested = Number(selectedMinutes);
+    if (!pattern || pattern.maxMinutes == null) {
+      return requested;
+    }
+    const cap = Number(pattern.maxMinutes);
+    if (!(cap > 0)) {
+      return requested;
+    }
+    return Math.min(requested, cap);
+  }
+
+  function easeSeconds(seconds, phaseId, level) {
+    const steps = Math.max(0, Number(level) || 0);
+    const floor = phaseId === "inhale2" ? 1 : 2;
+    return Math.max(floor, seconds - steps);
+  }
+
+  function easePhases(pattern, level) {
+    const steps = Math.max(0, Math.min(2, Number(level) || 0));
+    const phases = pattern.phases.map(function (phase) {
+      return {
+        id: phase.id,
+        seconds: easeSeconds(phase.seconds, phase.id, steps),
+      };
+    });
+    const clone = {};
+    for (const key in pattern) {
+      if (Object.prototype.hasOwnProperty.call(pattern, key)) {
+        clone[key] = pattern[key];
+      }
+    }
+    clone.phases = phases;
+    return clone;
+  }
+
+  function quickResetMs(pattern) {
+    const cycles = BREATHING.QUICK_RESET_CYCLES || 3;
+    return cycles * cycleMs(pattern);
+  }
+
+  function dropCountAfterMs(pattern) {
+    if (!pattern || !pattern.dropCountAfterCycles) {
+      return null;
+    }
+    return pattern.dropCountAfterCycles * cycleMs(pattern);
   }
 
   function previousPhase(pattern, index) {
@@ -355,7 +408,14 @@
     FORESHADOW_MS: FORESHADOW_MS,
     RESTING_SCALE: RESTING_SCALE,
     PREF_KEYS: PREF_KEYS,
+    HUM_INHALE_HZ: HUM_INHALE_HZ,
+    HUM_EXHALE_HZ: HUM_EXHALE_HZ,
     cycleMs: cycleMs,
+    effectiveMinutes: effectiveMinutes,
+    easeSeconds: easeSeconds,
+    easePhases: easePhases,
+    quickResetMs: quickResetMs,
+    dropCountAfterMs: dropCountAfterMs,
     phaseAt: phaseAt,
     scaleFor: scaleFor,
     opacityFor: opacityFor,
