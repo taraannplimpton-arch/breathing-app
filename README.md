@@ -1,6 +1,6 @@
 # Breathe
 
-A single-page breathing studio. Five science-backed patterns. Sessions last 1, 2, 5, or 10 minutes (default five). Energy is capped at one minute. **Quick Reset** is three physiological sighs (~30 seconds) and ignores the duration picker.
+A single-page breathing studio. Five science-backed patterns. Sessions last 1, 2, 5, or 10 minutes (default five). Energy is capped at one minute. **Quick Reset** is three physiological sighs (~30 seconds) and ignores the duration picker. **Ride the Urge** is a separate ~3 minute guide for when an impulse hits. It also ignores the duration picker. Nothing about an urge is saved.
 
 During a session the screen is a bubble, a sparse countdown, and three quiet controls (Pause / Ease / End). No phase labels, no instructions. The bubble grows on inhale, shrinks on exhale, and holds still during holds. Color follows both the chosen pattern and the current phase.
 
@@ -22,6 +22,7 @@ No build step. No dependencies.
 
 - **Start** begins a session of the selected pattern and length (1, 2, 5, or 10 minutes; default 5:00). Energy always runs one minute even if a longer length is stored.
 - **Quick Reset** runs three Rest-style physiological sighs (~27s of 2–1–6, about 30 seconds total) and then the completion screen. It ignores the duration picker and skips body setup.
+- **Ride the Urge** is not a sixth pattern. Stop, Observe, then 15 nasal breaths (4 in / 6 out, about 2.5 minutes), Expand, then Respond. The number counts breaths from 1 to 10 and starts again at 1, instead of a countdown. **Another round** repeats only the breathing, then returns to Respond. **Done** or **End** goes home. It skips body setup. Pause, Ease, and End work as in other sessions. Nothing is stored.
 - **Pause** / **Resume** freeze the bubble and the clock. Resume continues the same session; it does not restart.
 - **Ease** (`E`) shortens the remaining cycles by about one second per phase, from the next cycle. Tap twice at most. No phase goes under 2 seconds; Rest’s 1s top-up stays 1s.
 - **End** returns home immediately. Nothing to earn, nothing to lose. If you leave early, a quiet elapsed time may fade in on home (`1:12`) and then disappear.
@@ -37,7 +38,8 @@ Keyboard:
 | `Enter` | Home | Start |
 | `Space` | Session | Pause / Resume |
 | `E` | Session | Ease (shorter counts from the next cycle) |
-| `Escape` | Session, pre-roll, or completion | End (back home) / cancel pre-roll |
+| `Escape` | Session, pre-roll, urge guide, or completion | End (back home) / cancel pre-roll or the urge guide |
+| `Space` / tap | Urge guide | Continue |
 | `Space` / `Enter` / tap | Completion | Back home |
 | `Space` / tap | Pre-roll | Skip and start |
 
@@ -64,7 +66,7 @@ Timer, audio, and haptics default off (the timer is hidden most of the time unle
 
 Home also shows one short technique line for the selected pattern (never during the session). Rest is nose inhale, short nose top-up, long mouth exhale — not nose-only. Energy and HRV stay nose in and nose out. Focus (box) is nose for inhale, hold, exhale, and hold. Sleep is a small nasal inhale and an easy longer exhale (nose or soft pursed lips).
 
-Need chips on home — **Spike**, **Fog**, **Low energy**, **Sleep** — highlight a matching pattern (Spike also highlights Quick Reset). The pattern list remains; chips are not saved.
+Need chips on home — **Spike**, **Fog**, **Low energy**, **Sleep**, **Urge** — highlight a matching pattern (Spike also highlights Quick Reset). **Urge** highlights Ride the Urge and does not change the selected pattern. The pattern list remains; chips are not saved.
 
 ## The five protocols
 
@@ -126,6 +128,26 @@ Tactical / box breathing: equal sides, **all through the nose** — nose inhale,
 
 Small breath, easy longer exhale. Counts fade once the rhythm settles — after about four cycles the numbers drop and only the bubble continues (Always show timer still keeps them visible). Atmosphere is dim like Rest.
 
+## Ride the Urge
+
+A separate guide for the moment an impulse hits (a drink, smoking, vaping, the phone). It is not one of the five patterns, it ignores the minute picker, and it does not show body setup. Nothing is saved: no urge log, no streak, and no new `localStorage` key.
+
+The shape is SOBER from Mindfulness-Based Relapse Prevention (Bowen, Chawla, Marlatt): Stop, Observe, Breathe, Expand, Respond. Urge surfing treats a craving as a wave that usually rises for about a minute and has fallen off by about three. This is a way to sit with that window. It is not a treatment claim.
+
+| Step | Time | Screen |
+| --- | --- | --- |
+| Stop | ~5s | Pause. Put it down. |
+| Observe | ~10s | Notice the urge. Where do you feel it? Tap or wait. |
+| Breathe | 15 breaths, ~2.5 min | Bubble only. Nose, 4s in / 6s out. |
+| Expand | ~8s | Notice what changed. Widen your view. |
+| Respond | until you choose | What's your next move? |
+
+Breathe is slow nasal breathing at about 6 breaths per minute, with a longer exhale. The on-screen number counts the breath, 1 through 10, then 1 again. A faint wave behind the bubble rises through the first minute, crests, and subsides by the end. If the OS asks for reduced motion, that wave stays still. Pause, Ease (`E`), soft audio, and haptics behave as they do in other sessions. Ease can shorten later breaths; the round still ends after 15 breaths.
+
+Respond offers **Another round** (the breathing block again, then the same question) and **Done** (home). Leaving with **End** during the breathing also goes home. Neither is a verdict.
+
+Home keeps one quiet line with the button: *If you drink heavily every day, talk to a doctor before stopping suddenly.*
+
 ## Motion and completion
 
 In the last 0.5s of a phase the glow shifts slightly toward the next breath — no words. If the OS asks for reduced motion (`prefers-reduced-motion: reduce`), the large scale pulse is replaced by a gentler opacity/color change. Phase timing stays the same.
@@ -144,7 +166,7 @@ Icons are derived from `favicon.svg`.
 
 ## Verify
 
-Automated (protocol timings, Rest double-inhale scale, pause/resume clock, sparse timer, PWA files, Sleep, Quick Reset, Energy cap, ease):
+Automated (protocol timings, Rest double-inhale scale, pause/resume clock, sparse timer, PWA files, Sleep, Quick Reset, Energy cap, ease, Ride the Urge):
 
 ```bash
 node scripts/check.mjs
@@ -152,7 +174,7 @@ node scripts/check.mjs
 
 Manual checklist:
 
-1. Home shows five labels (Rest, Energy, HRV, Focus, Sleep), need chips (Spike, Fog, Low energy, Sleep), a technique line, a **1 / 2 / 5 / 10** minute control (default 5), **Quick Reset**, **Start**, and toggles (timer/audio/haptics/hum off by default; body setup on). Rest’s technique mentions a nose inhale, a short nose top-up, and a long mouth exhale.
+1. Home shows five labels (Rest, Energy, HRV, Focus, Sleep), need chips (Spike, Fog, Low energy, Sleep, Urge), a technique line, a **1 / 2 / 5 / 10** minute control (default 5), **Quick Reset**, **Ride the Urge**, **Start**, and toggles (timer/audio/haptics/hum off by default; body setup on). Rest’s technique mentions a nose inhale, a short nose top-up, and a long mouth exhale. A quiet line under the two shorter buttons says to talk to a doctor before stopping suddenly if you drink heavily every day.
 2. Start Rest. If body setup is on, six words fade, then the session. Controls are **Pause**, **Ease**, and **End** only. No inhale/exhale/hold labels. Atmosphere is dimmer than Energy.
 3. Bubble grows in two steps (2s then 1s), then shrinks for 6s. Countdown appears near the start, fades, and is not on screen the whole time (unless Always show timer is on).
 4. **Space** pauses (bubble and clock freeze). **Space** again resumes the same session. **Escape** or **End** returns home with no guilt copy; a quiet elapsed time is optional. **E** / Ease shortens the next cycle.
@@ -161,7 +183,8 @@ Manual checklist:
 7. Focus: grow, pause large, shrink, pause small (4s each). Hold uses a distinct violet tint vs sky-blue inhale and deep-blue exhale.
 8. Sleep: 4s grow, 6s shrink, dim like Rest. After about four cycles the countdown stays off (unless Always show timer).
 9. Quick Reset: no pre-roll, ~0:27, Rest bubble, then completion with *What's the smallest next move?* Duration picker unchanged after return.
-10. Spike highlights Rest and Quick Reset; Fog highlights HRV and Focus; Low energy selects Energy; Sleep selects Sleep.
+10. Spike highlights Rest and Quick Reset; Fog highlights HRV and Focus; Low energy selects Energy; Sleep selects Sleep. Urge highlights Ride the Urge and leaves the selected pattern alone.
 11. Let any pattern reach `0:00`. Quiet fade and the next-move line; tap or press a key to return home.
 12. Turn on Always show timer, Soft audio, Haptics, and Hum; reload — they stay. Body setup stays on unless turned off. Audio starts with Start, mutes on Pause/End. Hum changes Rest/Sleep technique copy and the exhale tone. With reduced-motion enabled in the OS, the bubble should not pulse in size.
 13. Served over HTTP, the document links a manifest and registers a service worker. Add to Home Screen is available in a supporting browser.
+14. Ride the Urge: no pre-roll and no duration change. Stop, then Observe (tap skips), then a dusk-clay bubble, 4s grow / 6s shrink, breath numbers 1–10 wrapping, faint wave. Expand, then *What's your next move?* Another round returns to the bubble, then Respond. Done returns home. End during the breathing returns home. Reduced motion keeps the wave still.

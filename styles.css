@@ -33,7 +33,9 @@ body {
 }
 
 body.is-session,
-body.is-preroll {
+body.is-preroll,
+body.is-urge-guide,
+body.is-urge-respond {
   overflow: hidden;
 }
 
@@ -61,6 +63,14 @@ body[data-mood="bright"] {
 
 body[data-mood="bright"] .atmosphere {
   filter: brightness(1.06) saturate(1.04);
+}
+
+body[data-mood="still"] {
+  --ink: #100e0c;
+}
+
+body[data-mood="still"] .atmosphere {
+  filter: brightness(0.86) saturate(0.82);
 }
 
 .grain {
@@ -296,6 +306,42 @@ body[data-mood="bright"] .atmosphere {
   color: var(--muted);
 }
 
+.home-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  width: min(100%, 22.5rem);
+}
+
+.home-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  width: 100%;
+}
+
+.home-actions .quick-reset {
+  width: auto;
+  flex: 1 1 9.5rem;
+  height: 2.85rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  padding: 0 0.7rem;
+  white-space: nowrap;
+}
+
+.urge-note {
+  margin: 0;
+  max-width: 22.5rem;
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+}
+
 .prefs {
   display: flex;
   flex-wrap: wrap;
@@ -406,7 +452,9 @@ body[data-mood="bright"] .atmosphere {
 
 .session.is-hidden,
 .home.is-hidden,
-.preroll.is-hidden {
+.preroll.is-hidden,
+.urge-guide.is-hidden,
+.urge-respond.is-hidden {
   display: none;
 }
 
@@ -442,6 +490,71 @@ body[data-mood="bright"] .atmosphere {
   text-transform: uppercase;
   color: var(--muted);
   opacity: 0.55;
+}
+
+.urge-guide {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.urge-guide:focus {
+  outline: none;
+}
+
+.urge-line {
+  margin: 0;
+  max-width: 18rem;
+  text-align: center;
+  font-size: clamp(1.35rem, 4.6vw, 1.85rem);
+  line-height: 1.35;
+  letter-spacing: 0.03em;
+  font-weight: 400;
+  opacity: 0;
+  transition: opacity 700ms ease;
+}
+
+.urge-line.is-on {
+  opacity: 0.92;
+}
+
+.urge-respond {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4rem;
+  padding: 1.5rem;
+}
+
+.urge-respond-line {
+  margin: 0;
+  max-width: 18rem;
+  text-align: center;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.urge-respond-line:focus {
+  outline: none;
+}
+
+.urge-respond-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: min(100%, 22.5rem);
+}
+
+.urge-respond .quick-reset,
+.urge-respond .start {
+  width: 100%;
 }
 
 .session-bar {
@@ -530,6 +643,44 @@ body.is-complete .next-move {
   height: min(58vmin, 22rem);
   display: grid;
   place-items: center;
+}
+
+body.is-urge .stage {
+  overflow: hidden;
+}
+
+.urge-wave {
+  display: none;
+  grid-area: 1 / 1;
+  width: 168%;
+  height: 42%;
+  align-self: end;
+  justify-self: center;
+  color: rgba(196, 164, 138, 0.9);
+  pointer-events: none;
+  opacity: calc(0.08 + (var(--urge-level, 0) * 0.14));
+  transform: translateY(calc((1 - var(--urge-level, 0)) * 38%)) scaleY(calc(0.62 + (var(--urge-level, 0) * 0.38)));
+  transform-origin: center bottom;
+  transition: none;
+}
+
+body.is-urge .urge-wave {
+  display: block;
+  z-index: 1;
+}
+
+body.is-urge .halo {
+  z-index: 0;
+}
+
+body.is-urge .bubble {
+  z-index: 2;
+}
+
+body.reduce-motion .urge-wave {
+  transform: none;
+  opacity: 0.1;
+  transition: none;
 }
 
 .halo,
@@ -636,8 +787,17 @@ body.is-complete .countdown {
   .need,
   .stage,
   .preroll-cue,
-  .next-move {
+  .next-move,
+  .urge-wave,
+  .urge-line,
+  .home-actions .quick-reset {
     transition-duration: 200ms;
+  }
+
+  .urge-wave {
+    transform: none;
+    opacity: 0.1;
+    transition: none;
   }
 }
 

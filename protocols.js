@@ -90,6 +90,36 @@
         },
       },
     },
+    URGE: {
+      id: "urge",
+      breaths: 15,
+      breathCountWrap: 10,
+      stopMs: 5000,
+      observeMs: 10000,
+      expandMs: 8000,
+      waveRiseMs: 60000,
+      pattern: {
+        id: "urge",
+        mood: "still",
+        phases: [
+          { id: "inhale", seconds: 4 },
+          { id: "exhale", seconds: 6 },
+        ],
+        colors: {
+          inhale: { fill: "#c4a48a", glow: "rgba(180, 140, 110, 0.28)", atmosphere: "#1a1410" },
+          exhale: { fill: "#5c4638", glow: "rgba(90, 64, 48, 0.20)", atmosphere: "#0c0a08" },
+        },
+      },
+      lines: {
+        stop: "Pause. Put it down.",
+        observe: "Notice the urge. Where do you feel it?",
+        expand: "Notice what changed. Widen your view.",
+        respond: "What's your next move?",
+        again: "Another round",
+        done: "Done",
+        safety: "If you drink heavily every day, talk to a doctor before stopping suddenly.",
+      },
+    },
   };
 
   root.BREATHING = BREATHING;

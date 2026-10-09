@@ -31,6 +31,7 @@
         <button type="button" class="need" role="option" data-need="fog" aria-selected="false">Fog</button>
         <button type="button" class="need" role="option" data-need="low-energy" aria-selected="false">Low energy</button>
         <button type="button" class="need" role="option" data-need="sleep" aria-selected="false">Sleep</button>
+        <button type="button" class="need" role="option" data-need="urge" aria-selected="false">Urge</button>
       </div>
 
       <div
@@ -50,7 +51,13 @@
       </div>
       <p class="duration-note" id="duration-note" hidden></p>
 
-      <button type="button" class="quick-reset" id="quick-reset" aria-label="Quick Reset, about 30 seconds">Quick Reset</button>
+      <div class="home-actions">
+        <div class="home-actions-row">
+          <button type="button" class="quick-reset" id="quick-reset" aria-label="Quick Reset, about 30 seconds">Quick Reset</button>
+          <button type="button" class="quick-reset" id="ride-urge" aria-label="Ride the Urge, about 3 minutes">Ride the Urge</button>
+        </div>
+        <p class="urge-note" id="urge-note">If you drink heavily every day, talk to a doctor before stopping suddenly.</p>
+      </div>
       <button type="button" class="start" id="start">Start</button>
 
       <div class="prefs">
@@ -82,6 +89,18 @@
       <p class="preroll-hint">Tap to skip</p>
     </div>
 
+    <div id="urge-guide" class="screen urge-guide is-hidden" tabindex="-1" hidden>
+      <p class="urge-line" id="urge-line" aria-live="polite"></p>
+    </div>
+
+    <div id="urge-respond" class="screen urge-respond is-hidden" hidden>
+      <p class="urge-respond-line" id="urge-respond-line" tabindex="-1">What's your next move?</p>
+      <div class="urge-respond-actions">
+        <button type="button" class="quick-reset" id="urge-again">Another round</button>
+        <button type="button" class="start" id="urge-done">Done</button>
+      </div>
+    </div>
+
     <div id="session" class="screen session is-hidden" hidden>
       <div class="session-bar">
         <button type="button" class="session-btn" id="pause-btn">Pause</button>
@@ -89,6 +108,9 @@
         <button type="button" class="session-btn" id="end-btn">End</button>
       </div>
       <div class="stage">
+        <svg class="urge-wave" id="urge-wave" aria-hidden="true" viewBox="0 0 200 80" preserveAspectRatio="none">
+          <path fill="currentColor" d="M0 58 C 20 58 20 34 40 34 C 60 34 60 58 80 58 C 100 58 100 34 120 34 C 140 34 140 58 160 58 C 180 58 180 40 200 40 V 80 H 0 Z"></path>
+        </svg>
         <div class="halo" id="halo" aria-hidden="true"></div>
         <div class="bubble" id="bubble" aria-hidden="true"></div>
       </div>

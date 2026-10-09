@@ -115,6 +115,74 @@ nearly(engine.scaleFor(engine.phaseAt(sleep, 0)), breathing.MIN_SCALE, 0.02, "Sl
 nearly(engine.scaleFor(engine.phaseAt(sleep, 4000 - 1)), breathing.MAX_SCALE, 0.02, "Sleep inhale should end near MAX_SCALE");
 nearly(engine.scaleFor(engine.phaseAt(sleep, 10000 - 1)), breathing.MIN_SCALE, 0.02, "Sleep exhale should end near MIN_SCALE");
 
+const urge = breathing.URGE;
+assert(Boolean(urge), "Ride the Urge config must exist");
+assert(!Object.prototype.hasOwnProperty.call(breathing.PATTERNS, "urge"), "Ride the Urge must not be a sixth pattern");
+assert(Object.keys(breathing.PATTERNS).length === 5, "the five patterns must stay five");
+assert(urge.stopMs === 5000, "Stop must be 5s");
+assert(urge.observeMs === 10000, "Observe must be 10s");
+assert(urge.expandMs === 8000, "Expand must be 8s");
+assert(urge.waveRiseMs === 60000, "the urge wave must crest at 60s");
+assert(urge.breaths === 15, "Breathe must be 15 breaths");
+assert(urge.breathCountWrap === 10, "breath counting must wrap at 10");
+assert(urge.pattern.mood === "still", "Ride the Urge needs its own calm mood");
+assert(urge.pattern.phases.length === 2, "Ride the Urge breathe is inhale then exhale");
+assert(urge.pattern.phases[0].id === "inhale" && urge.pattern.phases[0].seconds === 4, "Ride the Urge inhale must be 4s");
+assert(urge.pattern.phases[1].id === "exhale" && urge.pattern.phases[1].seconds === 6, "Ride the Urge exhale must be 6s");
+assert(engine.cycleMs(urge.pattern) === 10000, "Ride the Urge cycle must be 10s (6 breaths/min)");
+assert(engine.urgeBreatheMs(urge) === 150000, "15 breaths of 4-6 must be 150s");
+assert(Boolean(urge.pattern.colors.inhale) && Boolean(urge.pattern.colors.exhale), "Ride the Urge needs inhale and exhale colors");
+for (const pattern of Object.values(breathing.PATTERNS)) {
+  assert(pattern.colors.inhale.fill !== urge.pattern.colors.inhale.fill, "urge palette must be distinct from " + pattern.id);
+}
+assert(urge.lines.stop === "Pause. Put it down.", "Stop line must match");
+assert(urge.lines.observe === "Notice the urge. Where do you feel it?", "Observe line must match");
+assert(urge.lines.expand === "Notice what changed. Widen your view.", "Expand line must match");
+assert(urge.lines.respond === "What's your next move?", "Respond line must match");
+assert(urge.lines.again === "Another round", "Another round label must match");
+assert(urge.lines.done === "Done", "Done label must match");
+assert(urge.lines.safety === "If you drink heavily every day, talk to a doctor before stopping suddenly.", "safety line must match");
+assert(engine.urgeBreathLabel(0) === "1", "first breath displays 1");
+assert(engine.urgeBreathLabel(9) === "10", "tenth breath displays 10");
+assert(engine.urgeBreathLabel(10) === "1", "eleventh breath wraps to 1");
+assert(engine.urgeBreathLabel(14) === "5", "fifteenth breath displays 5");
+const urgeCountShown = [];
+for (let i = 0; i < 30; i += 1) {
+  const label = engine.urgeBreathLabel(i, urge.breathCountWrap);
+  urgeCountShown.push(label);
+  const n = Number(label);
+  assert(label === String((i % 10) + 1), "breath count must wrap 1-10 at cycle " + i);
+  assert(n >= 1 && n <= 10, "breath count must stay in 1..10");
+}
+assert(urgeCountShown.slice(0, 15).join(",") === "1,2,3,4,5,6,7,8,9,10,1,2,3,4,5", "15 breaths display 1-10 then 1-5");
+assert(engine.urgeWaveLevel(0) === 0, "wave starts low");
+assert(engine.urgeWaveLevel(30000) === 0.5, "wave is halfway up at 30s");
+assert(engine.urgeWaveLevel(60000) === 1, "wave crests at 60s");
+assert(engine.urgeWaveLevel(105000) === 0.5, "wave is halfway down after the crest");
+assert(engine.urgeWaveLevel(150000) === 0, "wave has subsided at 150s");
+assert(engine.urgeWaveLevel(-50) === 0, "wave clamps before the start");
+assert(engine.urgeWaveLevel(999999) === 0, "wave clamps after the end");
+const urgeRise = [0, 20000, 40000, 60000].map(function (ms) {
+  return engine.urgeWaveLevel(ms);
+});
+for (let i = 1; i < urgeRise.length; i += 1) {
+  assert(urgeRise[i] > urgeRise[i - 1], "urge wave must rise through the first minute");
+}
+const urgeFall = [60000, 90000, 120000, 150000].map(function (ms) {
+  return engine.urgeWaveLevel(ms);
+});
+for (let i = 1; i < urgeFall.length; i += 1) {
+  assert(urgeFall[i] < urgeFall[i - 1], "urge wave must subside after the crest");
+}
+const urgeClock = engine.createSessionClock(engine.urgeBreatheMs(urge));
+const urgeT0 = 50;
+urgeClock.start(urgeT0);
+assert(urgeClock.remaining(urgeT0) === 150000, "uneased Ride the Urge clock is 150s");
+assert(urgeClock.remaining(urgeT0 + 150000) === 0, "uneased Ride the Urge clock ends at 150s");
+nearly(engine.scaleFor(engine.phaseAt(urge.pattern, 0)), breathing.MIN_SCALE, 0.02, "Ride the Urge inhale should start near MIN_SCALE");
+nearly(engine.scaleFor(engine.phaseAt(urge.pattern, 4000 - 1)), breathing.MAX_SCALE, 0.02, "Ride the Urge inhale should end near MAX_SCALE");
+nearly(engine.scaleFor(engine.phaseAt(urge.pattern, 10000 - 1)), breathing.MIN_SCALE, 0.02, "Ride the Urge exhale should end near MIN_SCALE");
+
 assert(engine.quickResetMs(rest) === 27000, "Quick Reset must last 3 Rest cycles (27s)");
 assert(3 * engine.cycleMs(rest) === 27000, "three Rest sighs must be 27s");
 const qrClock = engine.createSessionClock(engine.quickResetMs(rest));
@@ -129,6 +197,12 @@ function easeIds(pattern, level) {
   });
 }
 assert(JSON.stringify(easeIds(sleep, 0)) === JSON.stringify([["inhale", 4], ["exhale", 6]]), "ease level 0 must be identity");
+assert(JSON.stringify(easeIds(breathing.URGE.pattern, 0)) === JSON.stringify([["inhale", 4], ["exhale", 6]]), "Ride the Urge ease 0 stays 4-6");
+assert(JSON.stringify(easeIds(breathing.URGE.pattern, 1)) === JSON.stringify([["inhale", 3], ["exhale", 5]]), "Ride the Urge eases to 3-5");
+assert(JSON.stringify(easeIds(breathing.URGE.pattern, 2)) === JSON.stringify([["inhale", 2], ["exhale", 4]]), "Ride the Urge second ease is 2-4");
+const urgePhasesBefore = JSON.stringify(breathing.URGE.pattern.phases);
+engine.easePhases(breathing.URGE.pattern, 2);
+assert(JSON.stringify(breathing.URGE.pattern.phases) === urgePhasesBefore, "easing Ride the Urge must not mutate its pattern");
 assert(JSON.stringify(easeIds(sleep, 1)) === JSON.stringify([["inhale", 3], ["exhale", 5]]), "Sleep 4-6 eases to 3-5");
 assert(JSON.stringify(easeIds(sleep, 2)) === JSON.stringify([["inhale", 2], ["exhale", 4]]), "Sleep second ease is 2-4");
 assert(JSON.stringify(easeIds(breathing.PATTERNS.hrv, 1)) === JSON.stringify([["inhale", 4], ["exhale", 4]]), "HRV 5-5 eases to 4-4");
@@ -356,6 +430,7 @@ assert(!/id="pref-audio"[^>]*checked/.test(html), "audio must default off");
 assert(!/id="pref-haptics"[^>]*checked/.test(html), "haptics must default off");
 assert(/id="quick-reset"/.test(html) && /Quick Reset/.test(html), "home needs a prominent Quick Reset button");
 assert(/id="needs"/.test(html) && /data-need="spike"/.test(html) && /data-need="fog"/.test(html) && /data-need="low-energy"/.test(html) && /data-need="sleep"/.test(html), "home needs Spike / Fog / Low energy / Sleep need chips");
+assert(/data-need="urge"/.test(html) && />Urge</.test(html), "home needs an Urge chip");
 assert(/>Spike</.test(html) && />Fog</.test(html) && />Low energy</.test(html), "need chips must use the Spike / Fog / Low energy labels");
 assert(/id="preroll"/.test(html) && /id="preroll-cue"/.test(html), "body-setup pre-roll screen must exist outside the session");
 assert(html.indexOf('id="preroll"') < html.indexOf('id="session"'), "pre-roll must come before the session screen");
@@ -364,10 +439,26 @@ assert(/id="pref-hum"/.test(html) && !/id="pref-hum"[^>]*checked/.test(html), "H
 assert(/id="duration-note"/.test(html), "Energy cap needs a duration note element");
 assert(/Feet/.test(js) && /Stack/.test(js) && /Hands/.test(js) && /Jaw/.test(js) && /Eyes/.test(js) && /Exhale/.test(js), "pre-roll cues must cycle Feet Stack Hands Jaw Eyes Exhale");
 assert(!/\b(Feet|Stack|Hands|Jaw)\b/.test(sessionChunk), "pre-roll cue words must not appear in the session screen");
+assert(/id="ride-urge"/.test(html) && /Ride the Urge/.test(html), "home needs a Ride the Urge button");
+assert(html.includes(breathing.URGE.lines.safety), "home must show the alcohol safety line");
+assert(html.includes(breathing.URGE.lines.respond), "respond screen must ask what's your next move");
+assert(html.includes(breathing.URGE.lines.again) && html.includes(breathing.URGE.lines.done), "respond screen needs Another round and Done");
+assert(/id="urge-wave"[^>]*aria-hidden/.test(html), "the urge wave must be decorative");
+const guideAt = html.indexOf('id="urge-guide"');
+const respondAt = html.indexOf('id="urge-respond"');
+const sessionAt = html.indexOf('id="session"');
+assert(guideAt > 0 && respondAt > guideAt && respondAt < sessionAt, "urge guide and respond screens must sit before the session");
+assert(!/id="urge-guide"/.test(sessionChunk) && !/id="urge-respond"/.test(sessionChunk), "urge words must stay outside the session screen");
+assert(!/What's your next move/.test(sessionChunk), "respond copy must not live in the session screen");
+const guideChunk = html.slice(guideAt, respondAt);
+assert(!/<input|<textarea|type="range"/i.test(guideChunk), "Observe must not ask for input");
 
 assert(css.includes("--scale"), "CSS must drive bubble scale from a variable");
 assert(/\.countdown[\s\S]{0,220}opacity[\s\S]{0,80}transition[\s\S]{0,40}opacity/.test(css.replace(/\n/g, " ")) || /transition:\s*opacity\s+9\d{2}ms/.test(css), "countdown must fade, not flash");
 assert(css.includes("prefers-reduced-motion"), "reduced-motion rule must exist");
+assert(css.includes(".urge-wave") && css.includes("--urge-level"), "the urge wave must be driven by --urge-level");
+assert(/prefers-reduced-motion[\s\S]*\.urge-wave/.test(css) && /body\.reduce-motion \.urge-wave/.test(css), "reduced motion must keep the urge wave still");
+assert(css.includes('data-mood="still"'), "Ride the Urge mood must be styled");
 assert(css.includes('data-mood="calm"') && css.includes('data-mood="bright"'), "Rest atmosphere must be distinct/dimmer than Energy");
 assert(js.includes("requestAnimationFrame"), "session animation must be clock-driven");
 assert(engineSrc.includes("phaseAt") && engineSrc.includes("scaleFor"), "bubble size must follow real phase durations");
@@ -389,6 +480,27 @@ assert(/function startQuickReset/.test(js) && /sessionKind = "quick-reset"/.test
   assert(!/showPreroll/.test(qrFn), "Quick Reset must skip the body-setup pre-roll");
 }
 assert(/key === "e" \|\| key === "E"/.test(js) && /bumpEase|easeLevel/.test(js), "Ease needs an E keyboard shortcut");
+assert(/URGE\.lines\.stop/.test(js) && /URGE\.lines\.observe/.test(js) && /URGE\.lines\.expand/.test(js), "guide copy must come from the URGE config");
+assert(/sessionKind = "urge"/.test(js), "Ride the Urge must use its own session kind");
+assert(/urgeBreathLabel\(/.test(js), "the urge number must be a breath count");
+assert(/urgeWaveLevel\(/.test(js), "the urge wave must follow the session clock");
+assert(/urgeAfterBreathe = "respond"/.test(js), "Another round must return to Respond rather than Expand");
+{
+  const rideStart = js.indexOf("function startRideUrge");
+  const rideEnd = js.indexOf("function startUrgeBreathe", rideStart);
+  const rideFn = rideStart >= 0 && rideEnd > rideStart ? js.slice(rideStart, rideEnd) : "";
+  assert(rideStart !== -1, "startRideUrge must exist");
+  assert(/sessionKind = "urge"/.test(rideFn), "Ride the Urge must set its session kind");
+  assert(!/showPreroll/.test(rideFn), "Ride the Urge must skip the body-setup pre-roll");
+  assert(!/selectedMinutes/.test(rideFn), "Ride the Urge must ignore the duration picker");
+  assert(/URGE\.lines\.stop/.test(rideFn), "Stop copy must come from URGE.lines.stop");
+}
+assert(Object.keys(engine.PREF_KEYS).length === 6, "Ride the Urge must not add a preference key");
+["alwaysTimer", "audio", "haptics", "duration", "bodySetup", "hum"].forEach(function (key) {
+  assert(Object.prototype.hasOwnProperty.call(engine.PREF_KEYS, key), "missing pref " + key);
+});
+assert(!/breathe\.urge/.test(persistSrc), "Ride the Urge must not add a localStorage key");
+assert(!/localStorage\.setItem\([^)]*urge/i.test(js), "Ride the Urge must not write storage");
 assert(/easePhases\(basePattern\(\),\s*easeLevel\)/.test(js) && /cycleOriginMs/.test(js), "Ease must apply from the next cycle via cycleOriginMs");
 assert(/Hum softly on the exhale/.test(js), "hum toggle must mention humming on the home technique line");
 assert(/triangle/.test(js) && /HUM_EXHALE_HZ/.test(js), "humming must switch the exhale tone when soft audio is on");
@@ -420,8 +532,9 @@ assert(/manifest\.webmanifest/.test(html), "HTML must link the web app manifest"
 assert(/sw\.js/.test(js), "app must register the service worker");
 assert(/"display"\s*:\s*"standalone"/.test(manifest), "manifest should be installable (standalone)");
 assert(sw.includes("caches") && sw.includes("index.html") && sw.includes("engine.js"), "service worker must cache the static app shell");
-assert(/const CACHE = "breathe-shell-v2"/.test(sw), "service worker cache name must bump to breathe-shell-v2");
+assert(/const CACHE = "breathe-shell-v3"/.test(sw), "service worker cache name must bump to breathe-shell-v3");
 assert(!/const CACHE = "breathe-shell-v1"/.test(sw), "service worker must not keep the v1 cache name");
+assert(!/const CACHE = "breathe-shell-v2"/.test(sw), "service worker must not keep the v2 cache name");
 assert(existsSync(path.join(root, "icon-192.png")) && existsSync(path.join(root, "icon-512.png")), "PWA icons must exist");
 assert(existsSync(path.join(root, "favicon.svg")), "favicon.svg must remain");
 
@@ -442,6 +555,13 @@ assert(/Ease/.test(readme) && /`E`/.test(readme), "README must document Ease and
 assert(/Spike/.test(readme) && /Fog/.test(readme) && /Low energy/.test(readme), "README must document pick-by-need chips");
 assert(/Hum on the exhale/.test(readme) && /breathe\.hum/.test(readme) && /Hum softly on the exhale/.test(readme), "README must document humming");
 assert(/What's the smallest next move\?/.test(readme), "README must document the completion prompt");
+assert(/Ride the Urge/.test(readme), "README must document Ride the Urge");
+assert(readme.includes(breathing.URGE.lines.safety), "README must include the alcohol safety line");
+assert(/What's your next move\?/.test(readme), "README must document the urge respond line");
+assert(/Another round/.test(readme), "README must document Another round");
+assert(/Urge/.test(readme), "README must document the Urge chip");
+assert(/Ride the Urge[\s\S]{0,500}ignores the duration picker/.test(readme), "README must say Ride the Urge ignores the duration picker");
+assert(/nothing about an urge is saved|nothing is saved/i.test(readme), "README must say the urge tool stores nothing");
 assert(/`1`–`5`|1`–`5/.test(readme), "README keyboard table must include keys 1-5");
 
 if (failures.length) {
@@ -452,4 +572,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log("ok — 5 protocols, Quick Reset, Energy cap, Sleep drop-count, ease, PWA shell");
+console.log("ok — 5 protocols, Quick Reset, Energy cap, Sleep drop-count, ease, Ride the Urge, PWA shell");

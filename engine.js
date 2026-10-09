@@ -76,6 +76,43 @@
     return pattern.dropCountAfterCycles * cycleMs(pattern);
   }
 
+  function urgeBreatheMs(urge) {
+    const spec = urge || BREATHING.URGE;
+    const breaths = Number(spec.breaths) || 0;
+    return breaths * cycleMs(spec.pattern);
+  }
+
+  function urgeBreathLabel(completedCycles, wrap) {
+    const mod = Number(wrap) > 0 ? Number(wrap) : 10;
+    const n = ((Number(completedCycles) || 0) % mod + mod) % mod;
+    return String(n + 1);
+  }
+
+  function urgeWaveLevel(elapsedMs, opts) {
+    const riseMs = opts && opts.riseMs != null ? Number(opts.riseMs) : 60000;
+    const durationMs = opts && opts.durationMs != null ? Number(opts.durationMs) : 150000;
+    const duration = durationMs > 0 ? durationMs : 0;
+    const rise = riseMs > 0 ? riseMs : 0;
+    let t = Number(elapsedMs) || 0;
+    if (t < 0) {
+      t = 0;
+    }
+    if (t > duration) {
+      t = duration;
+    }
+    if (!(duration > 0)) {
+      return 0;
+    }
+    if (t <= rise) {
+      return rise ? easeInOut(t / rise) : 1;
+    }
+    const fall = duration - rise;
+    if (!(fall > 0)) {
+      return 0;
+    }
+    return easeInOut(1 - (t - rise) / fall);
+  }
+
   function previousPhase(pattern, index) {
     return pattern.phases[(index - 1 + pattern.phases.length) % pattern.phases.length];
   }
@@ -416,6 +453,9 @@
     easePhases: easePhases,
     quickResetMs: quickResetMs,
     dropCountAfterMs: dropCountAfterMs,
+    urgeBreatheMs: urgeBreatheMs,
+    urgeBreathLabel: urgeBreathLabel,
+    urgeWaveLevel: urgeWaveLevel,
     phaseAt: phaseAt,
     scaleFor: scaleFor,
     opacityFor: opacityFor,

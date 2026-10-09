@@ -26,6 +26,9 @@
     easePhases,
     quickResetMs,
     dropCountAfterMs,
+    urgeBreatheMs,
+    urgeBreathLabel,
+    urgeWaveLevel,
     isExhalePhase,
     HUM_INHALE_HZ,
     HUM_EXHALE_HZ,
@@ -35,11 +38,13 @@
   const PREROLL_CUES = ["Feet", "Stack", "Hands", "Jaw", "Eyes", "Exhale"];
   const PREROLL_WORD_MS = 1600;
   const PREROLL_TAIL_MS = 400;
+  const URGE = window.BREATHING.URGE;
   const NEED_BY_ID = {
     spike: { select: "rest", patterns: ["rest"], quickReset: true },
     fog: { select: "hrv", patterns: ["hrv", "focus"] },
     "low-energy": { select: "energy", patterns: ["energy"] },
     sleep: { select: "sleep", patterns: ["sleep"] },
+    urge: { patterns: [], ride: true },
   };
 
   const homeEl = document.getElementById("home");
@@ -50,6 +55,13 @@
   const needsEl = document.getElementById("needs");
   const startEl = document.getElementById("start");
   const quickResetEl = document.getElementById("quick-reset");
+  const rideUrgeEl = document.getElementById("ride-urge");
+  const urgeGuideEl = document.getElementById("urge-guide");
+  const urgeLineEl = document.getElementById("urge-line");
+  const urgeRespondEl = document.getElementById("urge-respond");
+  const urgeRespondLineEl = document.getElementById("urge-respond-line");
+  const urgeAgainEl = document.getElementById("urge-again");
+  const urgeDoneEl = document.getElementById("urge-done");
   const countdownEl = document.getElementById("countdown");
   const bubbleEl = document.getElementById("bubble");
   const haloEl = document.getElementById("halo");
@@ -100,6 +112,12 @@
   let prerollTimer = 0;
   let prerollIndex = 0;
   let prerollActive = false;
+  let urgePhase = null;
+  let urgeAfterBreathe = "expand";
+  let urgeTimer = 0;
+  let urgeGuideActive = false;
+  let urgeGuideNext = null;
+  let urgeWaveHeld = false;
 
   let audioCtx = null;
   let gainNode = null;
@@ -110,6 +128,9 @@
   }
 
   function basePattern() {
+    if (sessionKind === "urge" && URGE && URGE.pattern) {
+      return URGE.pattern;
+    }
     return PATTERNS[selectedId];
   }
 
@@ -320,9 +341,19 @@
       quickResetEl.style.setProperty("--accent", rest.colors.inhale.fill);
       quickResetEl.classList.toggle("is-suggested", selectedNeed === "spike");
     }
+    if (rideUrgeEl && URGE && URGE.pattern) {
+      rideUrgeEl.style.setProperty("--accent", URGE.pattern.colors.inhale.fill);
+      rideUrgeEl.classList.toggle("is-suggested", selectedNeed === "urge");
+    }
   }
 
   function updateCountdown(elapsed, remaining) {
+    if (sessionKind === "urge") {
+      const wrap = URGE && URGE.breathCountWrap ? URGE.breathCountWrap : 10;
+      countdownEl.textContent = urgeBreathLabel(cyclesDone, wrap);
+      countdownEl.classList.toggle("is-on", !completing);
+      return;
+    }
     countdownEl.textContent = formatTime(remaining);
     const dropAfter = dropCountAfterMs(basePattern());
     const dropped = dropAfter != null && elapsed >= dropAfter && !prefs.alwaysTimer;
@@ -565,10 +596,31 @@
     }
   }
 
+  function syncUrgeWave(elapsed) {
+    if (sessionKind !== "urge" || urgePhase !== "breathe") {
+      return;
+    }
+    if (reducedMotion) {
+      if (!urgeWaveHeld) {
+        document.documentElement.style.setProperty("--urge-level", "0");
+        urgeWaveHeld = true;
+      }
+      return;
+    }
+    const level = urgeWaveLevel(elapsed, {
+      riseMs: URGE.waveRiseMs,
+      durationMs: clock.sessionMs,
+    });
+    document.documentElement.style.setProperty("--urge-level", String(level));
+  }
+
   function paint(now) {
     const elapsedRaw = completing ? clock.sessionMs : clock.elapsed(now);
     applyPendingEase(elapsedRaw);
     if (sessionKind === "quick-reset" && cyclesDone >= (QUICK_RESET_CYCLES || 3)) {
+      return;
+    }
+    if (sessionKind === "urge" && URGE && cyclesDone >= (URGE.breaths || 15)) {
       return;
     }
     const pattern = activePattern;
@@ -582,10 +634,19 @@
       : scaleFor(snapshot, { reducedMotion: reducedMotion });
     applyVisuals(pattern, snapshot, scale);
     updateCountdown(elapsed, remaining);
+    syncUrgeWave(elapsed);
     if (!clock.isPaused() && !completing) {
       updateAudio(snapshot);
       maybeHaptic(snapshot);
     }
+  }
+
+  function finishActiveSession() {
+    if (sessionKind === "urge") {
+      onUrgeBreatheDone();
+      return;
+    }
+    finishSession();
   }
 
   function frame(now) {
@@ -593,16 +654,17 @@
       return;
     }
     if (clock.remaining(now) <= 0) {
-      finishSession();
+      finishActiveSession();
       return;
     }
     paint(now);
     if (
       completing ||
-      (sessionKind === "quick-reset" && cyclesDone >= (QUICK_RESET_CYCLES || 3))
+      (sessionKind === "quick-reset" && cyclesDone >= (QUICK_RESET_CYCLES || 3)) ||
+      (sessionKind === "urge" && URGE && cyclesDone >= (URGE.breaths || 15))
     ) {
       if (!completing) {
-        finishSession();
+        finishActiveSession();
       }
       return;
     }
@@ -625,12 +687,37 @@
     document.body.classList.remove("is-preroll");
   }
 
+  function clearUrgeRun() {
+    window.clearTimeout(urgeTimer);
+    urgeTimer = 0;
+    urgeGuideActive = false;
+    urgeGuideNext = null;
+    urgePhase = null;
+    urgeAfterBreathe = "expand";
+    urgeWaveHeld = false;
+    document.documentElement.style.removeProperty("--urge-level");
+    if (urgeLineEl) {
+      urgeLineEl.textContent = "";
+      urgeLineEl.classList.remove("is-on");
+    }
+    if (urgeGuideEl) {
+      urgeGuideEl.hidden = true;
+      urgeGuideEl.classList.add("is-hidden");
+    }
+    if (urgeRespondEl) {
+      urgeRespondEl.hidden = true;
+      urgeRespondEl.classList.add("is-hidden");
+    }
+    document.body.classList.remove("is-urge", "is-urge-guide", "is-urge-respond");
+  }
+
   function showHome(opts) {
     const endedMs = opts && opts.sessionMs != null ? opts.sessionMs : clock.sessionMs;
     if (sessionKind === "quick-reset") {
       selectedId = homeSelectedId;
     }
     sessionKind = "normal";
+    clearUrgeRun();
     completing = false;
     clock.stop();
     cancelFrame();
@@ -649,7 +736,10 @@
       "is-complete",
       "is-paused",
       "is-foreshadow",
-      "is-preroll"
+      "is-preroll",
+      "is-urge",
+      "is-urge-guide",
+      "is-urge-respond"
     );
     pauseBtn.textContent = "Pause";
     pauseBtn.setAttribute("aria-pressed", "false");
@@ -673,12 +763,26 @@
 
   function showSession() {
     clearPreroll();
+    if (urgeGuideEl) {
+      urgeGuideEl.hidden = true;
+      urgeGuideEl.classList.add("is-hidden");
+    }
+    if (urgeRespondEl) {
+      urgeRespondEl.hidden = true;
+      urgeRespondEl.classList.add("is-hidden");
+    }
     homeEl.hidden = true;
     homeEl.classList.add("is-hidden");
     sessionEl.hidden = false;
     sessionEl.classList.remove("is-hidden");
     document.body.classList.add("is-session");
-    document.body.classList.remove("is-complete", "is-paused", "is-preroll");
+    document.body.classList.remove(
+      "is-complete",
+      "is-paused",
+      "is-preroll",
+      "is-urge-guide",
+      "is-urge-respond"
+    );
     hideWhisper();
     hideNextMove();
   }
@@ -717,6 +821,14 @@
     clock = createSessionClock(ms);
     glimpseSchedule = planGlimpses(ms);
     clock.start(performance.now());
+    if (sessionKind === "urge") {
+      document.body.classList.add("is-urge");
+      countdownEl.textContent = urgeBreathLabel(0, URGE.breathCountWrap);
+      countdownEl.classList.add("is-on");
+    } else {
+      document.body.classList.remove("is-urge");
+      document.documentElement.style.removeProperty("--urge-level");
+    }
     showSession();
     pauseBtn.textContent = "Pause";
     pauseBtn.setAttribute("aria-pressed", "false");
@@ -870,6 +982,193 @@
     showHome({ elapsedMs: elapsedMs, sessionMs: clock.sessionMs });
   }
 
+  function applyUrgeAtmosphere() {
+    if (!URGE || !URGE.pattern) {
+      return;
+    }
+    const colors = URGE.pattern.colors.inhale;
+    document.documentElement.style.setProperty("--atmosphere", colors.atmosphere);
+    document.documentElement.style.setProperty("--bubble-fill", colors.fill);
+    document.documentElement.style.setProperty("--bubble-glow", colors.glow);
+    document.body.dataset.pattern = URGE.pattern.id;
+    document.body.dataset.mood = URGE.pattern.mood || "still";
+  }
+
+  function showUrgeGuide(phase, line, ms, next) {
+    window.clearTimeout(urgeTimer);
+    urgeTimer = 0;
+    urgePhase = phase;
+    urgeGuideActive = true;
+    urgeGuideNext = next;
+    if (homeEl) {
+      homeEl.hidden = true;
+      homeEl.classList.add("is-hidden");
+    }
+    if (sessionEl) {
+      sessionEl.hidden = true;
+      sessionEl.classList.add("is-hidden");
+    }
+    if (urgeRespondEl) {
+      urgeRespondEl.hidden = true;
+      urgeRespondEl.classList.add("is-hidden");
+    }
+    if (prerollEl) {
+      prerollEl.hidden = true;
+      prerollEl.classList.add("is-hidden");
+    }
+    if (urgeGuideEl) {
+      urgeGuideEl.hidden = false;
+      urgeGuideEl.classList.remove("is-hidden");
+    }
+    document.body.classList.add("is-urge-guide");
+    document.body.classList.remove(
+      "is-session",
+      "is-complete",
+      "is-paused",
+      "is-preroll",
+      "is-urge",
+      "is-urge-respond",
+      "is-foreshadow"
+    );
+    applyUrgeAtmosphere();
+    hideWhisper();
+    if (urgeLineEl) {
+      urgeLineEl.classList.remove("is-on");
+      urgeLineEl.textContent = line || "";
+      if (reducedMotion) {
+        urgeLineEl.classList.add("is-on");
+      } else {
+        window.requestAnimationFrame(function () {
+          if (!urgeGuideActive || urgePhase !== phase || !urgeLineEl) {
+            return;
+          }
+          urgeLineEl.classList.add("is-on");
+        });
+      }
+    }
+    if (urgeGuideEl && typeof urgeGuideEl.focus === "function") {
+      urgeGuideEl.focus();
+    }
+    urgeTimer = window.setTimeout(function () {
+      if (urgePhase !== phase) {
+        return;
+      }
+      finishUrgeGuide();
+    }, ms);
+  }
+
+  function finishUrgeGuide() {
+    if (!urgeGuideActive) {
+      return;
+    }
+    const next = urgeGuideNext;
+    window.clearTimeout(urgeTimer);
+    urgeTimer = 0;
+    urgeGuideActive = false;
+    urgeGuideNext = null;
+    if (typeof next === "function") {
+      next();
+    }
+  }
+
+  function showUrgeObserve() {
+    showUrgeGuide("observe", URGE.lines.observe, URGE.observeMs, startUrgeBreathe);
+  }
+
+  function startRideUrge() {
+    sessionKind = "urge";
+    urgeAfterBreathe = "expand";
+    startAudio();
+    showUrgeGuide("stop", URGE.lines.stop, URGE.stopMs, showUrgeObserve);
+  }
+
+  function startUrgeBreathe() {
+    window.clearTimeout(urgeTimer);
+    urgeTimer = 0;
+    urgeGuideActive = false;
+    urgeGuideNext = null;
+    urgePhase = "breathe";
+    urgeWaveHeld = false;
+    sessionKind = "urge";
+    applyUrgeAtmosphere();
+    startSession({ sessionMs: urgeBreatheMs(URGE) });
+  }
+
+  function showUrgeRespond() {
+    window.clearTimeout(urgeTimer);
+    urgeTimer = 0;
+    urgeGuideActive = false;
+    urgeGuideNext = null;
+    cancelFrame();
+    stopAudio();
+    if (clock.isRunning() || clock.isPaused()) {
+      clock.stop();
+    }
+    urgePhase = "respond";
+    sessionKind = "urge";
+    urgeWaveHeld = false;
+    document.documentElement.style.removeProperty("--urge-level");
+    if (homeEl) {
+      homeEl.hidden = true;
+      homeEl.classList.add("is-hidden");
+    }
+    if (sessionEl) {
+      sessionEl.hidden = true;
+      sessionEl.classList.add("is-hidden");
+    }
+    if (urgeGuideEl) {
+      urgeGuideEl.hidden = true;
+      urgeGuideEl.classList.add("is-hidden");
+    }
+    if (urgeRespondEl) {
+      urgeRespondEl.hidden = false;
+      urgeRespondEl.classList.remove("is-hidden");
+    }
+    document.body.classList.remove(
+      "is-session",
+      "is-complete",
+      "is-paused",
+      "is-preroll",
+      "is-urge",
+      "is-urge-guide",
+      "is-foreshadow"
+    );
+    document.body.classList.add("is-urge-respond");
+    applyUrgeAtmosphere();
+    hideWhisper();
+    hideNextMove();
+    if (urgeRespondLineEl && typeof urgeRespondLineEl.focus === "function") {
+      urgeRespondLineEl.focus();
+    }
+  }
+
+  function onUrgeBreatheDone() {
+    if (urgePhase !== "breathe") {
+      return;
+    }
+    const destination = urgeAfterBreathe === "respond" ? "respond" : "expand";
+    urgePhase = destination;
+    cancelFrame();
+    muteAudio();
+    stopAudio();
+    clock.complete();
+    document.body.classList.remove("is-urge", "is-paused", "is-foreshadow");
+    document.documentElement.style.removeProperty("--urge-level");
+    urgeWaveHeld = false;
+    if (destination === "respond") {
+      showUrgeRespond();
+      return;
+    }
+    showUrgeGuide("expand", URGE.lines.expand, URGE.expandMs, showUrgeRespond);
+  }
+
+  function startUrgeAnotherRound() {
+    urgeAfterBreathe = "respond";
+    sessionKind = "urge";
+    startAudio();
+    startUrgeBreathe();
+  }
+
   function sessionText() {
     return sessionEl.innerText.replace(/\s+/g, " ").trim();
   }
@@ -877,6 +1176,12 @@
   function currentScreen() {
     if (prerollActive) {
       return "preroll";
+    }
+    if (urgeGuideActive) {
+      return "urge-guide";
+    }
+    if (urgePhase === "respond") {
+      return "urge-respond";
     }
     if (!clock.isRunning() && !clock.isPaused() && !completing) {
       return "home";
@@ -888,7 +1193,7 @@
     const now = performance.now();
     const pattern = currentPattern();
     const screen = currentScreen();
-    if (screen === "home" || screen === "preroll") {
+    if (screen === "home" || screen === "preroll" || screen === "urge-guide" || screen === "urge-respond") {
       return {
         screen: screen,
         patternId: selectedId,
@@ -903,6 +1208,7 @@
         sessionKind: sessionKind,
         easeLevel: easeLevel,
         need: selectedNeed,
+        urgePhase: urgePhase,
       };
     }
     const limit = clock.sessionMs;
@@ -928,12 +1234,29 @@
       sessionKind: sessionKind,
       easeLevel: easeLevel,
       easeApplied: easeApplied,
+      urgePhase: urgePhase,
     };
   }
 
   startEl.addEventListener("click", requestStart);
   if (quickResetEl) {
     quickResetEl.addEventListener("click", startQuickReset);
+  }
+  if (rideUrgeEl) {
+    rideUrgeEl.addEventListener("click", startRideUrge);
+  }
+  if (urgeGuideEl) {
+    urgeGuideEl.addEventListener("click", function () {
+      finishUrgeGuide();
+    });
+  }
+  if (urgeAgainEl) {
+    urgeAgainEl.addEventListener("click", startUrgeAnotherRound);
+  }
+  if (urgeDoneEl) {
+    urgeDoneEl.addEventListener("click", function () {
+      showHome();
+    });
   }
   pauseBtn.addEventListener("click", function (event) {
     event.stopPropagation();
@@ -972,7 +1295,9 @@
         return;
       }
       selectedNeed = need;
-      selectedId = spec.select;
+      if (spec.select) {
+        selectedId = spec.select;
+      }
       renderHome();
     });
   }
@@ -1042,6 +1367,31 @@
       return;
     }
 
+    if (urgeGuideActive) {
+      if (key === "Escape") {
+        showHome();
+        return;
+      }
+      if (key === " " || key === "Spacebar" || key === "Enter") {
+        event.preventDefault();
+        finishUrgeGuide();
+      }
+      return;
+    }
+
+    if (urgePhase === "respond") {
+      const onChoice = event.target === urgeAgainEl || event.target === urgeDoneEl;
+      if (key === "Escape") {
+        showHome();
+        return;
+      }
+      if (!onChoice && (key === " " || key === "Spacebar" || key === "Enter")) {
+        event.preventDefault();
+        showHome();
+      }
+      return;
+    }
+
     const inSession = clock.isRunning() || clock.isPaused() || completing;
 
     if (key === "Escape") {
@@ -1101,6 +1451,7 @@
       startSession();
     },
     quickReset: startQuickReset,
+    rideUrge: startRideUrge,
     home: showHome,
     pause: pauseSession,
     resume: resumeSession,
