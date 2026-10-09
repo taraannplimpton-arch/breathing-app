@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { inflateSync } from "node:zlib";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -35,8 +36,9 @@ assert(engine.formatTime(60 * 1000) === "1:00", "1-minute remaining formats as 1
 assert(engine.formatTime(2 * 60 * 1000) === "2:00", "2-minute remaining formats as 2:00");
 assert(engine.formatTime(10 * 60 * 1000) === "10:00", "10-minute remaining formats as 10:00");
 assert(breathing.MIN_SCALE < breathing.MAX_SCALE, "bubble must have room to grow");
-assert(Object.keys(breathing.PATTERNS).length === 5, "there must be exactly five patterns");
-assert(breathing.QUICK_RESET_CYCLES === 3, "Quick Reset must be 3 physiological sighs");
+assert(Object.keys(breathing.PATTERNS).length === 5, "there must be exactly five timed patterns");
+assert(breathing.APP_VERSION === "1.4.0", "APP_VERSION must be 1.4.0");
+assert(!Object.prototype.hasOwnProperty.call(breathing, "QUICK_RESET_CYCLES"), "Quick Reset config must be removed");
 
 const expected = {
   energy: [
@@ -69,7 +71,9 @@ for (const [id, phases] of Object.entries(expected)) {
 }
 
 const rest = breathing.PATTERNS.rest;
-assert(Boolean(rest), "missing Rest pattern");
+assert(Boolean(rest), "missing Calm Down pattern");
+assert(rest.id === "rest", "Calm Down must keep the internal id rest");
+assert(rest.homeLabel === "Calm Down", "the rest pattern must display as Calm Down");
 assert(rest.phases.length === 3, "Rest should be inhale, shorter inhale, longer exhale");
 assert(engine.isInhalePhase(rest.phases[0]), "Rest phase 0 must be inhale-class");
 assert(engine.isInhalePhase(rest.phases[1]), "Rest phase 1 must be inhale-class");
@@ -116,9 +120,13 @@ nearly(engine.scaleFor(engine.phaseAt(sleep, 4000 - 1)), breathing.MAX_SCALE, 0.
 nearly(engine.scaleFor(engine.phaseAt(sleep, 10000 - 1)), breathing.MIN_SCALE, 0.02, "Sleep exhale should end near MIN_SCALE");
 
 const urge = breathing.URGE;
-assert(Boolean(urge), "Ride the Urge config must exist");
-assert(!Object.prototype.hasOwnProperty.call(breathing.PATTERNS, "urge"), "Ride the Urge must not be a sixth pattern");
-assert(Object.keys(breathing.PATTERNS).length === 5, "the five patterns must stay five");
+assert(Boolean(urge), "Avoid the Urge config must exist");
+assert(urge.homeLabel === "Avoid the Urge", "the sixth card must be labeled Avoid the Urge");
+assert(urge.protocol === "4–6", "Avoid the Urge protocol line must stay short");
+assert(typeof urge.technique === "string" && urge.technique.length > 0 && urge.technique.length <= 80, "Avoid the Urge technique line must be short");
+assert(urge.durationNote === "About 3 minutes.", "Avoid the Urge must say it is about 3 minutes");
+assert(!Object.prototype.hasOwnProperty.call(breathing.PATTERNS, "urge"), "Avoid the Urge stays outside the five timed patterns");
+assert(Object.keys(breathing.PATTERNS).length === 5, "the five timed patterns must stay five");
 assert(urge.stopMs === 5000, "Stop must be 5s");
 assert(urge.observeMs === 10000, "Observe must be 10s");
 assert(urge.expandMs === 8000, "Expand must be 8s");
@@ -183,13 +191,7 @@ nearly(engine.scaleFor(engine.phaseAt(urge.pattern, 0)), breathing.MIN_SCALE, 0.
 nearly(engine.scaleFor(engine.phaseAt(urge.pattern, 4000 - 1)), breathing.MAX_SCALE, 0.02, "Ride the Urge inhale should end near MAX_SCALE");
 nearly(engine.scaleFor(engine.phaseAt(urge.pattern, 10000 - 1)), breathing.MIN_SCALE, 0.02, "Ride the Urge exhale should end near MIN_SCALE");
 
-assert(engine.quickResetMs(rest) === 27000, "Quick Reset must last 3 Rest cycles (27s)");
-assert(3 * engine.cycleMs(rest) === 27000, "three Rest sighs must be 27s");
-const qrClock = engine.createSessionClock(engine.quickResetMs(rest));
-const qrT0 = 100;
-qrClock.start(qrT0);
-assert(qrClock.remaining(qrT0) === 27000, "Quick Reset remaining at t=0 must be 27000ms");
-assert(qrClock.remaining(qrT0 + 27000) === 0, "Quick Reset must complete at 27s");
+assert(!Object.prototype.hasOwnProperty.call(engine, "quickResetMs"), "Quick Reset timing helper must be removed");
 
 function easeIds(pattern, level) {
   return engine.easePhases(pattern, level).phases.map(function (phase) {
@@ -428,10 +430,9 @@ assert(/id="pref-timer"/.test(html) && /id="pref-audio"/.test(html) && /id="pref
 assert(!/id="pref-timer"[^>]*checked/.test(html), "Always show timer must default off");
 assert(!/id="pref-audio"[^>]*checked/.test(html), "audio must default off");
 assert(!/id="pref-haptics"[^>]*checked/.test(html), "haptics must default off");
-assert(/id="quick-reset"/.test(html) && /Quick Reset/.test(html), "home needs a prominent Quick Reset button");
-assert(/id="needs"/.test(html) && /data-need="spike"/.test(html) && /data-need="fog"/.test(html) && /data-need="low-energy"/.test(html) && /data-need="sleep"/.test(html), "home needs Spike / Fog / Low energy / Sleep need chips");
-assert(/data-need="urge"/.test(html) && />Urge</.test(html), "home needs an Urge chip");
-assert(/>Spike</.test(html) && />Fog</.test(html) && />Low energy</.test(html), "need chips must use the Spike / Fog / Low energy labels");
+assert(!/id="quick-reset"/.test(html) && !/Quick Reset/.test(html), "home must not show Quick Reset");
+assert(!/id="needs"/.test(html) && !/data-need=/.test(html), "home must not show need chips");
+assert(!/>Spike</.test(html) && !/>Fog</.test(html) && !/>Low energy</.test(html), "need-chip labels must be gone");
 assert(/id="preroll"/.test(html) && /id="preroll-cue"/.test(html), "body-setup pre-roll screen must exist outside the session");
 assert(html.indexOf('id="preroll"') < html.indexOf('id="session"'), "pre-roll must come before the session screen");
 assert(/id="pref-body-setup"/.test(html) && /id="pref-body-setup"[^>]*checked/.test(html), "Body setup before sessions must default ON in markup");
@@ -439,8 +440,18 @@ assert(/id="pref-hum"/.test(html) && !/id="pref-hum"[^>]*checked/.test(html), "H
 assert(/id="duration-note"/.test(html), "Energy cap needs a duration note element");
 assert(/Feet/.test(js) && /Stack/.test(js) && /Hands/.test(js) && /Jaw/.test(js) && /Eyes/.test(js) && /Exhale/.test(js), "pre-roll cues must cycle Feet Stack Hands Jaw Eyes Exhale");
 assert(!/\b(Feet|Stack|Hands|Jaw)\b/.test(sessionChunk), "pre-roll cue words must not appear in the session screen");
-assert(/id="ride-urge"/.test(html) && /Ride the Urge/.test(html), "home needs a Ride the Urge button");
-assert(html.includes(breathing.URGE.lines.safety), "home must show the alcohol safety line");
+assert(!/id="ride-urge"/.test(html), "Avoid the Urge is a pattern card, not a separate home button");
+const aboutAt = html.indexOf('id="about"');
+const aboutChunk = aboutAt >= 0 ? html.slice(aboutAt, html.indexOf('id="preroll"')) : "";
+assert(aboutAt > 0 && aboutAt < html.indexOf('id="preroll"'), "about screen must sit with the other screens");
+assert(/id="about-open"/.test(html) && /aria-label="About"/.test(html), "home needs an About control with an accessible name");
+assert(/id="reset-settings"/.test(html) && /Reset settings/.test(html), "about needs a Reset settings button");
+assert(/privacy\.html/.test(aboutChunk) && /support\.html/.test(aboutChunk), "about must link to privacy and support");
+assert(/id="app-version"/.test(aboutChunk), "about must show the version from the app");
+assert(/faint, dizzy, panicky, or have chest pain/.test(aboutChunk), "about must include the safety note");
+assert(/not medical advice/.test(aboutChunk) && /not for emergencies/.test(aboutChunk), "about must say it is educational, not medical advice, and not for emergencies");
+assert(aboutChunk.includes(breathing.URGE.lines.safety), "about must include the Avoid the Urge doctor line");
+assert(/REPLACE support@example\.com before publishing/.test(aboutChunk), "about must mark the placeholder contact");
 assert(html.includes(breathing.URGE.lines.respond), "respond screen must ask what's your next move");
 assert(html.includes(breathing.URGE.lines.again) && html.includes(breathing.URGE.lines.done), "respond screen needs Another round and Done");
 assert(/id="urge-wave"[^>]*aria-hidden/.test(html), "the urge wave must be decorative");
@@ -470,14 +481,14 @@ assert(persistSrc.includes("breathe.bodySetup") && persistSrc.includes("breathe.
 assert(/readPref\(\s*PREF_KEYS\.bodySetup\s*,\s*true\s*\)/.test(js), "body setup must treat a missing key as on");
 assert(/createSessionClock\(ms\)/.test(js) && /planGlimpses\(ms\)/.test(js), "session clock and glimpses must use the selected duration");
 assert(/effectiveMinutes\(currentPattern\(\),\s*selectedMinutes\)/.test(js), "session length must go through effectiveMinutes so Energy caps at 1 minute");
-assert(/PATTERN_ORDER = \["rest", "energy", "hrv", "focus", "sleep"\]/.test(js), "home pattern order must include Sleep as the fifth pattern");
-assert(/function startQuickReset/.test(js) && /sessionKind = "quick-reset"/.test(js) && /quickResetMs/.test(js), "Quick Reset must start a dedicated short Rest session");
+assert(/PATTERN_ORDER = \["rest", "energy", "hrv", "focus", "sleep", "urge"\]/.test(js), "home cards must be Calm Down, Energy, HRV, Focus, Sleep, then Avoid the Urge");
+assert(!/function startQuickReset|sessionKind = "quick-reset"|quickResetMs|QUICK_RESET/.test(js), "Quick Reset must be removed from the app");
 {
-  const qrStart = js.indexOf("function startQuickReset");
-  const qrEnd = js.indexOf("function pauseSession", qrStart);
-  const qrFn = qrStart >= 0 && qrEnd > qrStart ? js.slice(qrStart, qrEnd) : "";
-  assert(/startSession/.test(qrFn), "Quick Reset must call startSession");
-  assert(!/showPreroll/.test(qrFn), "Quick Reset must skip the body-setup pre-roll");
+  const requestStart = js.indexOf("function requestStart");
+  const requestEnd = js.indexOf("function pauseSession", requestStart);
+  const requestFn = requestStart >= 0 && requestEnd > requestStart ? js.slice(requestStart, requestEnd) : "";
+  assert(/urgeSelected\(\)/.test(requestFn) && /startRideUrge\(\)/.test(requestFn), "selecting Avoid the Urge and starting must open that flow");
+  assert(!/showPreroll/.test(requestFn.split("startRideUrge")[0] || ""), "the urge branch must not show body setup");
 }
 assert(/key === "e" \|\| key === "E"/.test(js) && /bumpEase|easeLevel/.test(js), "Ease needs an E keyboard shortcut");
 assert(/URGE\.lines\.stop/.test(js) && /URGE\.lines\.observe/.test(js) && /URGE\.lines\.expand/.test(js), "guide copy must come from the URGE config");
@@ -532,10 +543,13 @@ assert(/manifest\.webmanifest/.test(html), "HTML must link the web app manifest"
 assert(/sw\.js/.test(js), "app must register the service worker");
 assert(/"display"\s*:\s*"standalone"/.test(manifest), "manifest should be installable (standalone)");
 assert(sw.includes("caches") && sw.includes("index.html") && sw.includes("engine.js"), "service worker must cache the static app shell");
-assert(/const CACHE = "breathe-shell-v3"/.test(sw), "service worker cache name must bump to breathe-shell-v3");
-assert(!/const CACHE = "breathe-shell-v1"/.test(sw), "service worker must not keep the v1 cache name");
-assert(!/const CACHE = "breathe-shell-v2"/.test(sw), "service worker must not keep the v2 cache name");
+assert(/const CACHE = "breathe-shell-v4"/.test(sw), "service worker cache name must bump to breathe-shell-v4");
+assert(!/breathe-shell-v1|breathe-shell-v2|breathe-shell-v3/.test(sw), "service worker must not keep an older cache name");
+["privacy.html", "support.html", "icon-180.png", "icon-1024.png", "icon-maskable-512.png"].forEach(function (asset) {
+  assert(sw.includes(asset), "service worker must cache " + asset);
+});
 assert(existsSync(path.join(root, "icon-192.png")) && existsSync(path.join(root, "icon-512.png")), "PWA icons must exist");
+assert(existsSync(path.join(root, "icon-180.png")) && existsSync(path.join(root, "icon-1024.png")) && existsSync(path.join(root, "icon-maskable-512.png")), "apple touch, 1024, and maskable icons must exist");
 assert(existsSync(path.join(root, "favicon.svg")), "favicon.svg must remain");
 
 assert(/Pause/.test(readme) && /Resume/.test(readme) && /Escape/.test(readme) && /Space/.test(readme), "README must document Pause/Resume/End and shortcuts");
@@ -547,22 +561,219 @@ assert(/Balban/.test(readme) && /2023/.test(readme) && /cyclic sighing/i.test(re
 assert(/First nasal inhale \| 2/.test(readme) && /Second nasal top-up \| 1/.test(readme) && /Long mouth exhale \| 6/.test(readme), "README must document Rest seconds");
 assert(/Add to Home Screen/.test(readme) && /file:\/\//.test(readme) && /http\.server/.test(readme), "README must document PWA install vs file://");
 assert(/Manual checklist/.test(readme), "README must keep a manual checklist");
-assert(/Quick Reset/.test(readme) && /30 seconds|~30|about 30|three/.test(readme), "README must document Quick Reset");
+assert(!/Quick Reset/.test(readme), "README must not document Quick Reset");
+assert(/Calm Down/.test(readme) && /Avoid the Urge/.test(readme), "README must document the six-card names");
 assert(/Sleep/.test(readme) && /4–6|4-6/.test(readme) && /drop the count|counts fade/i.test(readme), "README must document Sleep 4-6 and drop-the-count");
 assert(/one minute/.test(readme) && /lightheaded/.test(readme) && /More air isn't better/.test(readme), "README must document the Energy 1-minute cap and safety line");
 assert(/Body setup before sessions/.test(readme) && /breathe\.bodySetup/.test(readme), "README must document body setup and its localStorage key");
 assert(/Ease/.test(readme) && /`E`/.test(readme), "README must document Ease and the E shortcut");
-assert(/Spike/.test(readme) && /Fog/.test(readme) && /Low energy/.test(readme), "README must document pick-by-need chips");
+assert(!/Spike/.test(readme) && !/Fog/.test(readme) && !/Low energy/.test(readme), "README must not document the removed need chips");
 assert(/Hum on the exhale/.test(readme) && /breathe\.hum/.test(readme) && /Hum softly on the exhale/.test(readme), "README must document humming");
 assert(/What's the smallest next move\?/.test(readme), "README must document the completion prompt");
-assert(/Ride the Urge/.test(readme), "README must document Ride the Urge");
+assert(/Avoid the Urge/.test(readme), "README must document Avoid the Urge");
 assert(readme.includes(breathing.URGE.lines.safety), "README must include the alcohol safety line");
 assert(/What's your next move\?/.test(readme), "README must document the urge respond line");
 assert(/Another round/.test(readme), "README must document Another round");
-assert(/Urge/.test(readme), "README must document the Urge chip");
-assert(/Ride the Urge[\s\S]{0,500}ignores the duration picker/.test(readme), "README must say Ride the Urge ignores the duration picker");
+assert(/Avoid the Urge[\s\S]{0,700}ignores the duration picker/.test(readme), "README must say Avoid the Urge ignores the duration picker");
+assert(/About 3 minutes/.test(readme), "README must say Avoid the Urge is about 3 minutes");
 assert(/nothing about an urge is saved|nothing is saved/i.test(readme), "README must say the urge tool stores nothing");
-assert(/`1`–`5`|1`–`5/.test(readme), "README keyboard table must include keys 1-5");
+assert(/`1`–`6`/.test(readme), "README keyboard table must include keys 1-6");
+
+assert(/viewport-fit=cover/.test(html), "index must set viewport-fit=cover");
+assert(/name="theme-color"/.test(html), "index must set theme-color");
+assert(/apple-mobile-web-app-capable/.test(html), "index must set apple-mobile-web-app-capable");
+assert(/apple-mobile-web-app-status-bar-style/.test(html), "index must set the status bar style");
+assert(/apple-mobile-web-app-title/.test(html), "index must set the Apple web app title");
+assert(/apple-touch-icon/.test(html) && /icon-180\.png/.test(html), "index must link a 180px apple touch icon");
+assert(/navigator\.wakeLock/.test(js) && /request\(\s*"screen"\s*\)/.test(js), "sessions must request a screen wake lock where supported");
+assert(/function releaseWakeLock/.test(js) && /releaseWakeLock\(/.test(js), "the wake lock must be released when a session ends");
+assert(/visibilitychange/.test(js) && /visibilityState === "hidden"/.test(js) && /pauseSession\(/.test(js), "a running session must auto-pause when backgrounded");
+assert(/wakeLockWanted/.test(js), "the wake lock must be re-acquired when the app is visible again");
+assert(/env\(safe-area-inset-/.test(css), "layout must pad for the iOS safe area");
+assert(/-webkit-touch-callout:\s*none/.test(css), "long-press callouts must be disabled");
+assert(/touch-action:\s*manipulation/.test(css), "controls must use touch-action manipulation");
+assert(/overscroll-behavior:\s*none/.test(css), "the session screen must block pull-to-refresh overscroll");
+assert(/prefers-reduced-motion/.test(css), "reduced motion must stay honored");
+assert(/APP_VERSION/.test(js) && !/1\.4\.0/.test(js), "the version shown in the app must come from APP_VERSION, not a second literal");
+assert(/confirm\(/.test(js) && /breathe\./.test(js) && /removeItem/.test(js), "reset must confirm, then clear only this app's localStorage keys");
+assert(/breathe\.pattern/.test(js), "a saved rest id must still be accepted");
+
+const privacy = readFileSync(path.join(root, "privacy.html"), "utf8");
+const support = readFileSync(path.join(root, "support.html"), "utf8");
+const storeDoc = readFileSync(path.join(root, "APP_STORE.md"), "utf8");
+assert(/no account/i.test(privacy) && /analytics/i.test(privacy) && /tracking/i.test(privacy), "privacy policy must say there is no account, analytics, or tracking");
+assert(/localStorage/.test(privacy) && /third part/i.test(privacy), "privacy policy must say preferences stay in localStorage and there are no third parties");
+assert(/October 9, 2026/.test(privacy), "privacy policy effective date must be October 9, 2026");
+assert(/support@example\.com/.test(privacy) && /REPLACE support@example\.com before publishing/.test(privacy), "privacy page must use the placeholder contact");
+assert(/href="\.\/"/.test(privacy) || /href="index\.html"/.test(privacy), "privacy page must link back to the app");
+assert(/viewport-fit=cover/.test(privacy) && /apple-mobile-web-app-capable/.test(privacy), "privacy page must carry the iOS viewport meta");
+assert(/silent/i.test(support) && /haptic/i.test(support) && /reset/i.test(support), "support page must cover silent mode, haptics, and reset");
+assert(/support@example\.com/.test(support) && /REPLACE support@example\.com before publishing/.test(support), "support page must use the placeholder contact");
+assert(/href="\.\/"/.test(support), "support page must link back to the app");
+assert(/viewport-fit=cover/.test(support), "support page must set viewport-fit=cover");
+assert(/com\.TODO\.breathe/.test(storeDoc), "APP_STORE.md must include the bundle id placeholder");
+assert(/Data Not Collected/.test(storeDoc), "APP_STORE.md must answer App Privacy as Data Not Collected");
+assert(/4\.2/.test(storeDoc) && /haptic/i.test(storeDoc) && /notification/i.test(storeDoc), "APP_STORE.md must cover guideline 4.2 and native haptics / reminders");
+assert(/treatment/.test(storeDoc) && /cure/.test(storeDoc), "APP_STORE.md must caution against treatment and cure claims");
+assert(/6\.9/.test(storeDoc) && /6\.7/.test(storeDoc) && /6\.5/.test(storeDoc) && /iPad/.test(storeDoc), "APP_STORE.md must list iPhone and iPad screenshot sizes");
+assert(/REPLACE support@example\.com with the dedicated support address before publishing/.test(storeDoc), "APP_STORE.md must flag the placeholder contact");
+assert(/TODO/.test(storeDoc), "APP_STORE.md must list owner decisions as TODO");
+const pagesOrigin = "https://" + "taraannplimpton-arch.github.io/breathing-app/";
+assert(storeDoc.includes(pagesOrigin + "privacy.html"), "APP_STORE.md must document the privacy URL");
+assert(storeDoc.includes(pagesOrigin + "support.html"), "APP_STORE.md must document the support URL");
+
+const manifestJson = JSON.parse(manifest);
+assert(manifestJson.name === "Breathe" && manifestJson.short_name === "Breathe", "manifest name and short_name must be Breathe");
+assert(manifestJson.id === "/breathing-app/", "manifest id must be the GitHub Pages path");
+assert(manifestJson.start_url === "/breathing-app/" && manifestJson.scope === "/breathing-app/", "manifest start_url and scope must be /breathing-app/");
+assert(manifestJson.display === "standalone", "manifest display must be standalone");
+assert(manifestJson.orientation === "portrait", "manifest orientation must be portrait");
+assert(JSON.stringify(manifestJson.categories) === JSON.stringify(["health", "lifestyle"]), "manifest categories must be health and lifestyle");
+const iconNotes = manifestJson.icons.map(function (icon) {
+  return icon.sizes + " " + icon.purpose;
+});
+assert(iconNotes.some(function (note) { return note.indexOf("192x192") !== -1; }), "manifest needs a 192 icon");
+assert(iconNotes.some(function (note) { return note.indexOf("512x512") !== -1 && note.indexOf("any") !== -1; }), "manifest needs a 512 any-purpose icon");
+assert(iconNotes.some(function (note) { return note.indexOf("1024x1024") !== -1; }), "manifest needs a 1024 icon");
+assert(iconNotes.some(function (note) { return note.indexOf("maskable") !== -1; }), "manifest needs a maskable icon");
+
+function paeth(a, b, c) {
+  const p = a + b - c;
+  const pa = Math.abs(p - a);
+  const pb = Math.abs(p - b);
+  const pc = Math.abs(p - c);
+  if (pa <= pb && pa <= pc) return a;
+  if (pb <= pc) return b;
+  return c;
+}
+
+function readPng(filePath) {
+  const buf = readFileSync(filePath);
+  assert(buf.subarray(0, 8).toString("hex") === "89504e470d0a1a0a", path.basename(filePath) + " must be a PNG");
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let colorType = -1;
+  let bitDepth = 0;
+  const idats = [];
+  let trns = false;
+  while (offset + 8 <= buf.length) {
+    const len = buf.readUInt32BE(offset);
+    const type = buf.subarray(offset + 4, offset + 8).toString("ascii");
+    const data = buf.subarray(offset + 8, offset + 8 + len);
+    if (type === "IHDR") {
+      width = data.readUInt32BE(0);
+      height = data.readUInt32BE(4);
+      bitDepth = data[8];
+      colorType = data[9];
+    } else if (type === "tRNS") {
+      trns = true;
+    } else if (type === "IDAT") {
+      idats.push(data);
+    } else if (type === "IEND") {
+      break;
+    }
+    offset += 12 + len;
+  }
+  const inflated = inflateSync(Buffer.concat(idats));
+  const bpp = colorType === 2 ? 3 : 4;
+  const stride = width * bpp;
+  const rows = [];
+  let pos = 0;
+  const prior = Buffer.alloc(stride);
+  for (let y = 0; y < height; y += 1) {
+    const filter = inflated[pos];
+    pos += 1;
+    const raw = inflated.subarray(pos, pos + stride);
+    pos += stride;
+    const out = Buffer.alloc(stride);
+    for (let i = 0; i < stride; i += 1) {
+      const left = i >= bpp ? out[i - bpp] : 0;
+      const up = prior[i];
+      const ul = i >= bpp ? prior[i - bpp] : 0;
+      const v = raw[i];
+      if (filter === 0) out[i] = v;
+      else if (filter === 1) out[i] = (v + left) & 255;
+      else if (filter === 2) out[i] = (v + up) & 255;
+      else if (filter === 3) out[i] = (v + Math.floor((left + up) / 2)) & 255;
+      else out[i] = (v + paeth(left, up, ul)) & 255;
+    }
+    rows.push(out);
+    out.copy(prior);
+  }
+  return {
+    width: width,
+    height: height,
+    colorType: colorType,
+    bitDepth: bitDepth,
+    trns: trns,
+    pixel: function (x, y) {
+      const row = rows[y];
+      const i = x * bpp;
+      return [row[i], row[i + 1], row[i + 2]];
+    },
+  };
+}
+
+function sameRgb(actual, expected) {
+  return actual[0] === expected[0] && actual[1] === expected[1] && actual[2] === expected[2];
+}
+
+const storeIcon = readPng(path.join(root, "icon-1024.png"));
+const bg = [14, 13, 11];
+const fg = [201, 176, 255];
+assert(storeIcon.width === 1024 && storeIcon.height === 1024, "icon-1024 must be 1024x1024");
+assert(storeIcon.colorType === 2 && storeIcon.bitDepth === 8 && !storeIcon.trns, "icon-1024 must be opaque RGB with no alpha");
+assert(sameRgb(storeIcon.pixel(0, 0), bg) && sameRgb(storeIcon.pixel(1023, 1023), bg), "icon-1024 corners must be the flat background, not rounded off");
+assert(sameRgb(storeIcon.pixel(512, 512), fg), "icon-1024 must keep the existing circle art");
+const touchIcon = readPng(path.join(root, "icon-180.png"));
+assert(touchIcon.width === 180 && touchIcon.height === 180 && touchIcon.colorType === 2, "apple touch icon must be a 180px opaque PNG");
+const maskIcon = readPng(path.join(root, "icon-maskable-512.png"));
+assert(maskIcon.width === 512 && maskIcon.height === 512 && maskIcon.colorType === 2, "maskable icon must be a 512px opaque PNG");
+assert(sameRgb(maskIcon.pixel(Math.floor(512 * 0.08), 256), bg), "maskable icon must keep safe-zone padding outside the circle");
+assert(sameRgb(maskIcon.pixel(256, 256), fg), "maskable icon must still show the circle");
+
+const bannedEmail = ["taraannplimpton", "gmail.com"].join("@");
+const allowedDocs = new Set(["README.md", "APP_STORE.md"]);
+const allowedUrls = new Set([
+  pagesOrigin + "privacy.html",
+  pagesOrigin + "support.html",
+]);
+const svgNamespace = "http://" + "www.w3.org/2000/svg";
+
+function walkFiles(dir, out) {
+  readdirSync(dir).forEach(function (name) {
+    if (name === ".git" || name === "node_modules") {
+      return;
+    }
+    const full = path.join(dir, name);
+    if (statSync(full).isDirectory()) {
+      walkFiles(full, out);
+      return;
+    }
+    out.push(full);
+  });
+}
+
+const repoFiles = [];
+walkFiles(root, repoFiles);
+repoFiles.forEach(function (filePath) {
+  const text = readFileSync(filePath);
+  const asString = text.toString("utf8");
+  assert(!asString.includes(bannedEmail), path.relative(root, filePath) + " must not contain a personal email");
+  const urls = asString.match(/https?:\/\/[^\s"'<>)\\]+/g) || [];
+  urls.forEach(function (url) {
+    const clean = url.replace(/[.,)|*`]+$/, "");
+    if (clean === svgNamespace) {
+      return;
+    }
+    const rel = path.relative(root, filePath);
+    if (allowedDocs.has(rel) && allowedUrls.has(clean)) {
+      return;
+    }
+    failures.push(rel + " has an external URL that is not allowed: " + clean);
+  });
+});
 
 if (failures.length) {
   console.error("check failed:");
@@ -572,4 +783,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log("ok — 5 protocols, Quick Reset, Energy cap, Sleep drop-count, ease, Ride the Urge, PWA shell");
+console.log("ok — 6 cards, Energy cap, Sleep drop-count, ease, Avoid the Urge, App Store shell");

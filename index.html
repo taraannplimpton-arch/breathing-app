@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="Breathe" />
     <title>Breathe</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="icon-192.png" />
+    <link rel="apple-touch-icon" href="icon-180.png" sizes="180x180" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -26,13 +26,13 @@
         <p class="whisper" id="whisper" hidden></p>
       </header>
 
-      <div class="needs" id="needs" role="listbox" aria-label="What do you need">
-        <button type="button" class="need" role="option" data-need="spike" aria-selected="false">Spike</button>
-        <button type="button" class="need" role="option" data-need="fog" aria-selected="false">Fog</button>
-        <button type="button" class="need" role="option" data-need="low-energy" aria-selected="false">Low energy</button>
-        <button type="button" class="need" role="option" data-need="sleep" aria-selected="false">Sleep</button>
-        <button type="button" class="need" role="option" data-need="urge" aria-selected="false">Urge</button>
-      </div>
+      <button type="button" class="info-link" id="about-open" aria-label="About">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
+          <circle cx="12" cy="8" r="1" fill="currentColor"></circle>
+          <path d="M12 11.5 V17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+        </svg>
+      </button>
 
       <div
         class="patterns"
@@ -44,21 +44,14 @@
       <p class="technique" id="technique"></p>
 
       <div class="durations" id="durations" role="radiogroup" aria-label="Session length">
-        <button type="button" class="duration" role="radio" data-minutes="1" aria-checked="false">1 min</button>
-        <button type="button" class="duration" role="radio" data-minutes="2" aria-checked="false">2 min</button>
-        <button type="button" class="duration is-selected" role="radio" data-minutes="5" aria-checked="true">5 min</button>
-        <button type="button" class="duration" role="radio" data-minutes="10" aria-checked="false">10 min</button>
+        <button type="button" class="duration" role="radio" data-minutes="1" aria-checked="false" aria-label="1 minute">1 min</button>
+        <button type="button" class="duration" role="radio" data-minutes="2" aria-checked="false" aria-label="2 minutes">2 min</button>
+        <button type="button" class="duration is-selected" role="radio" data-minutes="5" aria-checked="true" aria-label="5 minutes">5 min</button>
+        <button type="button" class="duration" role="radio" data-minutes="10" aria-checked="false" aria-label="10 minutes">10 min</button>
       </div>
       <p class="duration-note" id="duration-note" hidden></p>
 
-      <div class="home-actions">
-        <div class="home-actions-row">
-          <button type="button" class="quick-reset" id="quick-reset" aria-label="Quick Reset, about 30 seconds">Quick Reset</button>
-          <button type="button" class="quick-reset" id="ride-urge" aria-label="Ride the Urge, about 3 minutes">Ride the Urge</button>
-        </div>
-        <p class="urge-note" id="urge-note">If you drink heavily every day, talk to a doctor before stopping suddenly.</p>
-      </div>
-      <button type="button" class="start" id="start">Start</button>
+      <button type="button" class="start" id="start" aria-label="Start session">Start</button>
 
       <div class="prefs">
         <label class="pref">
@@ -84,28 +77,57 @@
       </div>
     </main>
 
+    <section id="about" class="screen about is-hidden" hidden aria-labelledby="about-title">
+      <div class="about-inner">
+        <button type="button" class="session-btn about-close" id="about-close" aria-label="Close about">Close</button>
+        <h2 id="about-title">About</h2>
+        <p>
+          Breathe is a quiet breathing practice you run on your own device. Six cards: Calm Down, Energy, HRV, Focus, Sleep, and Avoid the Urge. Nothing you do here is uploaded.
+        </p>
+        <h3>How to use it</h3>
+        <p>
+          Pick a card. Choose 1, 2, 5, or 10 minutes, then Start. Energy is always one minute. Avoid the Urge is about three minutes and does not use that picker. Pause, Ease, or End whenever you want. Body setup, when it is on, shows a few words before a timed session. Soft audio and haptics stay off until you turn them on. Humming is for Calm Down and Sleep.
+        </p>
+        <h3>Safety</h3>
+        <p>
+          Stop if you feel faint, dizzy, panicky, or have chest pain. Consult a doctor first if you are pregnant or you have a heart, lung, seizure, or other significant condition. This app is educational. It is not medical advice, and it is not for emergencies.
+        </p>
+        <p>If you drink heavily every day, talk to a doctor before stopping suddenly.</p>
+        <p class="about-version">Version <span id="app-version"></span></p>
+        <p class="about-links">
+          <a href="privacy.html">Privacy</a>
+          <a href="support.html">Support</a>
+        </p>
+        <p class="about-contact">
+          <!-- REPLACE support@example.com before publishing -->
+          <a href="mailto:support@example.com">support@example.com</a>
+        </p>
+        <button type="button" class="ghost-btn" id="reset-settings" aria-label="Reset settings">Reset settings</button>
+      </div>
+    </section>
+
     <div id="preroll" class="screen preroll is-hidden" hidden>
       <p class="preroll-cue" id="preroll-cue"></p>
       <p class="preroll-hint">Tap to skip</p>
     </div>
 
-    <div id="urge-guide" class="screen urge-guide is-hidden" tabindex="-1" hidden>
+    <div id="urge-guide" class="screen urge-guide is-hidden" tabindex="-1" hidden aria-label="Avoid the Urge">
       <p class="urge-line" id="urge-line" aria-live="polite"></p>
     </div>
 
     <div id="urge-respond" class="screen urge-respond is-hidden" hidden>
       <p class="urge-respond-line" id="urge-respond-line" tabindex="-1">What's your next move?</p>
       <div class="urge-respond-actions">
-        <button type="button" class="quick-reset" id="urge-again">Another round</button>
-        <button type="button" class="start" id="urge-done">Done</button>
+        <button type="button" class="ghost-btn" id="urge-again" aria-label="Another round">Another round</button>
+        <button type="button" class="start" id="urge-done" aria-label="Done">Done</button>
       </div>
     </div>
 
     <div id="session" class="screen session is-hidden" hidden>
       <div class="session-bar">
-        <button type="button" class="session-btn" id="pause-btn">Pause</button>
+        <button type="button" class="session-btn" id="pause-btn" aria-label="Pause session">Pause</button>
         <button type="button" class="session-btn" id="ease-btn" aria-label="Easier">Ease</button>
-        <button type="button" class="session-btn" id="end-btn">End</button>
+        <button type="button" class="session-btn" id="end-btn" aria-label="End session">End</button>
       </div>
       <div class="stage">
         <svg class="urge-wave" id="urge-wave" aria-hidden="true" viewBox="0 0 200 80" preserveAspectRatio="none">

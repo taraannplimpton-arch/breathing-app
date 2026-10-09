@@ -1,7 +1,9 @@
-const CACHE = "breathe-shell-v3";
+const CACHE = "breathe-shell-v4";
 const ASSETS = [
   "./",
   "./index.html",
+  "./privacy.html",
+  "./support.html",
   "./styles.css",
   "./app.js",
   "./engine.js",
@@ -10,6 +12,9 @@ const ASSETS = [
   "./manifest.webmanifest",
   "./icon-192.png",
   "./icon-512.png",
+  "./icon-180.png",
+  "./icon-1024.png",
+  "./icon-maskable-512.png",
 ];
 
 self.addEventListener("install", function (event) {

@@ -64,11 +64,6 @@
     return clone;
   }
 
-  function quickResetMs(pattern) {
-    const cycles = BREATHING.QUICK_RESET_CYCLES || 3;
-    return cycles * cycleMs(pattern);
-  }
-
   function dropCountAfterMs(pattern) {
     if (!pattern || !pattern.dropCountAfterCycles) {
       return null;
@@ -451,7 +446,6 @@
     effectiveMinutes: effectiveMinutes,
     easeSeconds: easeSeconds,
     easePhases: easePhases,
-    quickResetMs: quickResetMs,
     dropCountAfterMs: dropCountAfterMs,
     urgeBreatheMs: urgeBreatheMs,
     urgeBreathLabel: urgeBreathLabel,

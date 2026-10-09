@@ -1,14 +1,14 @@
 (function (root) {
   const BREATHING = {
+    APP_VERSION: "1.4.0",
     SESSION_MS: 5 * 60 * 1000,
     DURATION_MINUTES: [1, 2, 5, 10],
-    QUICK_RESET_CYCLES: 3,
     MIN_SCALE: 0.42,
     MAX_SCALE: 1,
     PATTERNS: {
       rest: {
         id: "rest",
-        homeLabel: "Rest",
+        homeLabel: "Calm Down",
         protocol: "2–1–6",
         mood: "calm",
         technique: "Nose inhale, short nose top-up, long mouth exhale",
@@ -92,6 +92,10 @@
     },
     URGE: {
       id: "urge",
+      homeLabel: "Avoid the Urge",
+      protocol: "4–6",
+      technique: "Stop, observe, breathe, then choose.",
+      durationNote: "About 3 minutes.",
       breaths: 15,
       breathCountWrap: 10,
       stopMs: 5000,

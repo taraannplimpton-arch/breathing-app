@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0e0d0b" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Breathe" />
+    <title>Privacy · Breathe</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icon-180.png" sizes="180x180" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="legal">
+    <main>
+      <p class="legal-back"><a href="./">Back to Breathe</a></p>
+      <h1>Privacy</h1>
+      <p>Breathe does not collect data. There is no account, no analytics, and no tracking.</p>
+      <p>
+        Preferences, such as session length and the audio, haptics, timer, body setup, and hum toggles, stay on this device in localStorage. They are not sent to a server. There are no third parties.
+      </p>
+      <p>The app does not ask for your name, email, contacts, health records, or location. A breathing session is not saved.</p>
+      <p>
+        Questions:
+        <!-- REPLACE support@example.com before publishing -->
+        <a href="mailto:support@example.com">support@example.com</a>
+      </p>
+      <p>Effective date October 9, 2026.</p>
+      <p class="legal-back"><a href="support.html">Support</a></p>
+    </main>
+    <script>
+      if ("serviceWorker" in navigator && /^https?:$/.test(window.location.protocol)) {
+        navigator.serviceWorker.register("sw.js").catch(function () {});
+      }
+    </script>
+  </body>
+</html>

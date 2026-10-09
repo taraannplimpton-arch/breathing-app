@@ -1,12 +1,15 @@
 {
   "name": "Breathe",
   "short_name": "Breathe",
-  "description": "A calm breathing studio",
-  "start_url": "./",
-  "scope": "./",
+  "id": "/breathing-app/",
+  "description": "A calm breathing practice",
+  "start_url": "/breathing-app/",
+  "scope": "/breathing-app/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0e0d0b",
   "theme_color": "#0e0d0b",
+  "categories": ["health", "lifestyle"],
   "icons": [
     {
       "src": "favicon.svg",
@@ -25,6 +28,18 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
