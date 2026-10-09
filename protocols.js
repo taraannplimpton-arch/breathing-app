@@ -121,7 +121,6 @@
         respond: "What's your next move?",
         again: "Another round",
         done: "Done",
-        safety: "If you drink heavily every day, talk to a doctor before stopping suddenly.",
       },
     },
   };

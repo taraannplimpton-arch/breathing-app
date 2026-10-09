@@ -44,7 +44,7 @@ No build step. No dependencies. No requests to other sites.
 
 If **Body setup before sessions** is on (default), Start first shows a ~10-second pre-roll: *Feet. Stack. Hands. Jaw. Eyes. Exhale.* One word at a time. Tap or **Space** skips it; **Escape** cancels home. Avoid the Urge never shows it. The in-session screen stays numbers-only.
 
-**About** (the info icon) explains the app, the safety note, and the version. It links to Privacy and Support. **Reset settings** clears only this app’s `localStorage` keys (anything starting with `breathe.`) after you confirm, then restores defaults.
+**About** (INFORMATION, top right) explains the app, the safety note, and the version. It links to Privacy and Support. **Reset settings** clears only this app’s `localStorage` keys (anything starting with `breathe.`) after you confirm, then restores defaults.
 
 Keyboard:
 
@@ -158,8 +158,6 @@ Breathe is slow nasal breathing at about 6 breaths per minute, with a longer exh
 
 Respond offers **Another round** (the breathing block again, then the same question) and **Done** (home). Leaving with **End** during the breathing also goes home. Neither is a verdict.
 
-About keeps one quiet line for this card: *If you drink heavily every day, talk to a doctor before stopping suddenly.*
-
 ## Motion and completion
 
 In the last 0.5s of a phase the glow shifts slightly toward the next breath — no words. If the OS asks for reduced motion (`prefers-reduced-motion: reduce`), the large scale pulse is replaced by a gentler opacity/color change. Phase timing stays the same.
@@ -172,7 +170,7 @@ From a served origin (`python3 -m http.server` or any HTTPS host, including GitH
 
 1. Open the app in Chrome, Safari, or Edge.
 2. Use **Add to Home Screen** / **Install app**.
-3. The manifest (`manifest.webmanifest`) and a small service worker (`sw.js`, cache `breathe-shell-v5`) cache the static shell — `index.html`, `privacy.html`, `support.html`, scripts, styles, and icons — so the app still opens offline.
+3. The manifest (`manifest.webmanifest`) and a small service worker (`sw.js`, cache `breathe-shell-v6`) cache the static shell — `index.html`, `privacy.html`, `support.html`, scripts, styles, and icons — so the app still opens offline.
 
 Icons: `icon-192.png`, `icon-512.png`, opaque `icon-1024.png` (no transparency, square corners), `icon-180.png` for Apple touch, and a maskable `icon-maskable-512.png` whose circle sits inside the safe zone. They are derived from `favicon.svg`.
 
@@ -188,7 +186,7 @@ node scripts/check.mjs
 
 Manual checklist:
 
-1. Home shows six cards in order (Calm Down, Energy, HRV, Focus, Sleep, Avoid the Urge), a technique line, a **1 / 2 / 5 / 10** minute control (default 5), **Start**, an About icon, and toggles (timer/audio/haptics/hum off by default; body setup on). Home is only those cards. Calm Down’s technique mentions a nose inhale, a short nose top-up, and a long mouth exhale.
+1. Home shows six cards in order (Calm Down, Energy, HRV, Focus, Sleep, Avoid the Urge), a technique line, a **1 / 2 / 5 / 10** minute control (default 5), **Start**, an INFORMATION button, and toggles (timer/audio/haptics/hum off by default; body setup on). Home is only those cards. Calm Down’s technique mentions a nose inhale, a short nose top-up, and a long mouth exhale.
 2. Start Calm Down. If body setup is on, six words fade, then the session. Controls are **Pause**, **Ease**, and **End** only. No inhale/exhale/hold labels. Atmosphere is dimmer than Energy. The screen stays awake where a wake lock exists. Switching away pauses the session.
 3. Bubble grows in two steps (2s then 1s), then shrinks for 6s. Countdown appears near the start, fades, and is not on screen the whole time (unless Always show timer is on).
 4. **Space** pauses (bubble and clock freeze). **Space** again resumes the same session. **Escape** or **End** returns home with no guilt copy; a quiet elapsed time is optional. **E** / Ease shortens the next cycle.
@@ -199,6 +197,6 @@ Manual checklist:
 9. Keys `1` through `6` select the six cards. Avoid the Urge disables the minute picker and shows *About 3 minutes.* Start skips body setup.
 10. Let any timed pattern reach `0:00`. Quiet fade and the next-move line; tap or press a key to return home.
 11. Turn on Always show timer, Soft audio, Haptics, and Hum; reload — they stay. Body setup stays on unless turned off. Audio starts with Start, mutes on Pause/End. Hum changes Calm Down/Sleep technique copy and the exhale tone. With reduced-motion enabled in the OS, the bubble should not pulse in size.
-12. About shows what the app is, how to use it, the safety note, the doctor line, the version, links to privacy and support, and Reset settings (confirm, then only this app’s keys are cleared).
+12. About shows what the app is, how to use it, the safety note, the version, links to privacy and support, and Reset settings (confirm, then only this app’s keys are cleared).
 13. Served over HTTP, `/`, `/privacy.html`, and `/support.html` load. The document links a manifest and registers a service worker. Add to Home Screen is available in a supporting browser.
 14. Avoid the Urge: no pre-roll and no duration change. Stop, then Observe (tap skips), then a dusk-clay bubble, 4s grow / 6s shrink, breath numbers 1–10 wrapping, faint wave. Expand, then *What's your next move?* Another round returns to the bubble, then Respond. Done returns home. End during the breathing returns home. Reduced motion keeps the wave still.

@@ -27,9 +27,9 @@ Privacy nutrition label: Data Not Collected. Confirm again in App Store Connect 
 
 ## Age rating
 
-No user accounts, no user-generated content, no unrestricted web browsing if the wrapper only loads this origin. The only sensitive line is the Avoid the Urge caution about heavy daily drinking. There is no graphic content.
+No user accounts, no user-generated content, no unrestricted web browsing if the wrapper only loads this origin. There is no graphic content.
 
-TODO: complete Apple’s age-rating questionnaire. Likely 4+ or 12+ depending on how that alcohol caution is classified. Do not guess in the store listing; record the questionnaire result here.
+TODO: complete Apple’s age-rating questionnaire. Do not guess in the store listing; record the questionnaire result here.
 
 ## Guideline 4.2 (minimum functionality)
 
@@ -52,7 +52,7 @@ Avoid: treatment, cure, therapy, clinical, rehab, “stop drinking,” “quit s
 
 Prefer: breathing practice, educational, not medical advice, not for emergencies.
 
-Avoid the Urge is a short pause when an impulse shows up. It is not an addiction program. The doctor line stays: if you drink heavily every day, talk to a doctor before stopping suddenly. The in-app safety note stays: stop if you feel faint, dizzy, panicky, or have chest pain; consult a doctor first if pregnant or with heart, lung, seizure, or other significant conditions.
+Avoid the Urge is a short pause when an impulse shows up. It is not an addiction program. The in-app safety note stays: stop if you feel faint, dizzy, panicky, or have chest pain; consult a doctor first if pregnant or with heart, lung, seizure, or other significant conditions.
 
 Screenshot captions and the store description use the same restraint. Do not put a claim in the subtitle that the app itself refuses to make.
 
@@ -81,7 +81,7 @@ TODO: if the binary is iPhone-only, do not upload iPad screenshots; say so in Ap
 - TODO: reminder copy and default schedule, if reminders ship. Off until the person opts in.
 - TODO: age-rating questionnaire answers.
 - TODO: subtitle, description, keywords, and promotional text with no treatment, cure, or addiction claims.
-- TODO: which screenshots show Avoid the Urge (the doctor line is on About, not on the card).
+- TODO: which screenshots show Avoid the Urge.
 - TODO: price (this app is built as free) and availability countries.
 - TODO: export compliance. The web app adds no custom encryption beyond the platform HTTPS stack.
 - TODO: confirm App Privacy stays **Data Not Collected** after the wrapper’s libraries are included.

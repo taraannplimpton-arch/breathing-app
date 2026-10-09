@@ -9,6 +9,7 @@ const require = createRequire(import.meta.url);
 const breathing = require(path.join(root, "protocols.js"));
 const engine = require(path.join(root, "engine.js"));
 const html = readFileSync(path.join(root, "index.html"), "utf8");
+const protocolsSrc = readFileSync(path.join(root, "protocols.js"), "utf8");
 const css = readFileSync(path.join(root, "styles.css"), "utf8");
 const js = readFileSync(path.join(root, "app.js"), "utf8");
 const engineSrc = readFileSync(path.join(root, "engine.js"), "utf8");
@@ -149,7 +150,10 @@ assert(urge.lines.expand === "Notice what changed. Widen your view.", "Expand li
 assert(urge.lines.respond === "What's your next move?", "Respond line must match");
 assert(urge.lines.again === "Another round", "Another round label must match");
 assert(urge.lines.done === "Done", "Done label must match");
-assert(urge.lines.safety === "If you drink heavily every day, talk to a doctor before stopping suddenly.", "safety line must match");
+const drinkingLine = "If you drink heavily every day, talk to a doctor before stopping suddenly.";
+assert(!html.includes(drinkingLine), "index.html must not include the heavy-drinking line");
+assert(!js.includes(drinkingLine), "app.js must not include the heavy-drinking line");
+assert(!protocolsSrc.includes(drinkingLine), "protocols.js must not include the heavy-drinking line");
 assert(engine.urgeBreathLabel(0) === "1", "first breath displays 1");
 assert(engine.urgeBreathLabel(9) === "10", "tenth breath displays 10");
 assert(engine.urgeBreathLabel(10) === "1", "eleventh breath wraps to 1");
@@ -444,13 +448,16 @@ assert(!/id="ride-urge"/.test(html), "Avoid the Urge is a pattern card, not a se
 const aboutAt = html.indexOf('id="about"');
 const aboutChunk = aboutAt >= 0 ? html.slice(aboutAt, html.indexOf('id="preroll"')) : "";
 assert(aboutAt > 0 && aboutAt < html.indexOf('id="preroll"'), "about screen must sit with the other screens");
-assert(/id="about-open"/.test(html) && /aria-label="About"/.test(html), "home needs an About control with an accessible name");
+assert(/id="about-open"[^>]*aria-label="Information"/.test(html), "home needs an Information control with an accessible name");
+assert(/id="about-open"[^>]*>\s*INFORMATION\s*<\/button>/.test(html), "home Information control must be a text button");
+const aboutOpenTag = html.slice(html.indexOf('id="about-open"'), html.indexOf('id="about-open"') + 400);
+assert(aboutOpenTag.indexOf("</button>") > 0 && !/<svg/.test(aboutOpenTag.slice(0, aboutOpenTag.indexOf("</button>"))), "Information control must not use an icon svg");
 assert(/id="reset-settings"/.test(html) && /Reset settings/.test(html), "about needs a Reset settings button");
 assert(/privacy\.html/.test(aboutChunk) && /support\.html/.test(aboutChunk), "about must link to privacy and support");
 assert(/id="app-version"/.test(aboutChunk), "about must show the version from the app");
 assert(/faint, dizzy, panicky, or have chest pain/.test(aboutChunk), "about must include the safety note");
 assert(/not medical advice/.test(aboutChunk) && /not for emergencies/.test(aboutChunk), "about must say it is educational, not medical advice, and not for emergencies");
-assert(aboutChunk.includes(breathing.URGE.lines.safety), "about must include the Avoid the Urge doctor line");
+assert(!aboutChunk.includes(drinkingLine), "about must not include the heavy-drinking line");
 assert(/noodleelder@gmail\.com/.test(aboutChunk) && !/support@example\.com/.test(aboutChunk), "about must show noodleelder@gmail.com");
 assert(html.includes(breathing.URGE.lines.respond), "respond screen must ask what's your next move");
 assert(html.includes(breathing.URGE.lines.again) && html.includes(breathing.URGE.lines.done), "respond screen needs Another round and Done");
@@ -543,8 +550,8 @@ assert(/manifest\.webmanifest/.test(html), "HTML must link the web app manifest"
 assert(/sw\.js/.test(js), "app must register the service worker");
 assert(/"display"\s*:\s*"standalone"/.test(manifest), "manifest should be installable (standalone)");
 assert(sw.includes("caches") && sw.includes("index.html") && sw.includes("engine.js"), "service worker must cache the static app shell");
-assert(/const CACHE = "breathe-shell-v5"/.test(sw), "service worker cache name must bump to breathe-shell-v5");
-assert(!/breathe-shell-v1|breathe-shell-v2|breathe-shell-v3|breathe-shell-v4/.test(sw), "service worker must not keep an older cache name");
+assert(/const CACHE = "breathe-shell-v6"/.test(sw), "service worker cache name must bump to breathe-shell-v6");
+assert(!/breathe-shell-v1|breathe-shell-v2|breathe-shell-v3|breathe-shell-v4|breathe-shell-v5/.test(sw), "service worker must not keep an older cache name");
 ["privacy.html", "support.html", "icon-180.png", "icon-1024.png", "icon-maskable-512.png"].forEach(function (asset) {
   assert(sw.includes(asset), "service worker must cache " + asset);
 });
@@ -571,7 +578,7 @@ assert(!/Spike/.test(readme) && !/Fog/.test(readme) && !/Low energy/.test(readme
 assert(/Hum on the exhale/.test(readme) && /breathe\.hum/.test(readme) && /Hum softly on the exhale/.test(readme), "README must document humming");
 assert(/What's the smallest next move\?/.test(readme), "README must document the completion prompt");
 assert(/Avoid the Urge/.test(readme), "README must document Avoid the Urge");
-assert(readme.includes(breathing.URGE.lines.safety), "README must include the alcohol safety line");
+assert(!readme.includes(drinkingLine), "README must not include the heavy-drinking line");
 assert(/What's your next move\?/.test(readme), "README must document the urge respond line");
 assert(/Another round/.test(readme), "README must document Another round");
 assert(/Avoid the Urge[\s\S]{0,700}ignores the duration picker/.test(readme), "README must say Avoid the Urge ignores the duration picker");
