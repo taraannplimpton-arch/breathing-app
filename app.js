@@ -3,12 +3,6 @@
 
   const { SESSION_MS, MIN_SCALE, PATTERNS, DURATION_MINUTES } = window.BREATHING;
   const ALLOWED_MINUTES = DURATION_MINUTES || [1, 2, 5, 10];
-  const DURATION_WORDS = {
-    1: "one minute",
-    2: "two minutes",
-    5: "five minutes",
-    10: "ten minutes",
-  };
   const engine = window.BREATHING_ENGINE;
   const {
     phaseAt,
@@ -65,7 +59,6 @@
   const nextMoveEl = document.getElementById("next-move");
   const techniqueEl = document.getElementById("technique");
   const whisperEl = document.getElementById("whisper");
-  const taglineEl = document.getElementById("tagline");
   const durationsEl = document.getElementById("durations");
   const durationNoteEl = document.getElementById("duration-note");
   const prefTimerEl = document.getElementById("pref-timer");
@@ -215,9 +208,6 @@
       button.setAttribute("aria-checked", on ? "true" : "false");
       button.setAttribute("aria-disabled", blocked ? "true" : "false");
     });
-    if (taglineEl) {
-      taglineEl.textContent = urgeOn ? "about three minutes" : DURATION_WORDS[shown] || "five minutes";
-    }
     if (durationNoteEl) {
       if (urgeOn) {
         durationNoteEl.hidden = false;

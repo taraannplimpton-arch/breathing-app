@@ -451,7 +451,7 @@ assert(/id="app-version"/.test(aboutChunk), "about must show the version from th
 assert(/faint, dizzy, panicky, or have chest pain/.test(aboutChunk), "about must include the safety note");
 assert(/not medical advice/.test(aboutChunk) && /not for emergencies/.test(aboutChunk), "about must say it is educational, not medical advice, and not for emergencies");
 assert(aboutChunk.includes(breathing.URGE.lines.safety), "about must include the Avoid the Urge doctor line");
-assert(/REPLACE support@example\.com before publishing/.test(aboutChunk), "about must mark the placeholder contact");
+assert(/noodleelder@gmail\.com/.test(aboutChunk) && !/support@example\.com/.test(aboutChunk), "about must show noodleelder@gmail.com");
 assert(html.includes(breathing.URGE.lines.respond), "respond screen must ask what's your next move");
 assert(html.includes(breathing.URGE.lines.again) && html.includes(breathing.URGE.lines.done), "respond screen needs Another round and Done");
 assert(/id="urge-wave"[^>]*aria-hidden/.test(html), "the urge wave must be decorative");
@@ -543,8 +543,8 @@ assert(/manifest\.webmanifest/.test(html), "HTML must link the web app manifest"
 assert(/sw\.js/.test(js), "app must register the service worker");
 assert(/"display"\s*:\s*"standalone"/.test(manifest), "manifest should be installable (standalone)");
 assert(sw.includes("caches") && sw.includes("index.html") && sw.includes("engine.js"), "service worker must cache the static app shell");
-assert(/const CACHE = "breathe-shell-v4"/.test(sw), "service worker cache name must bump to breathe-shell-v4");
-assert(!/breathe-shell-v1|breathe-shell-v2|breathe-shell-v3/.test(sw), "service worker must not keep an older cache name");
+assert(/const CACHE = "breathe-shell-v5"/.test(sw), "service worker cache name must bump to breathe-shell-v5");
+assert(!/breathe-shell-v1|breathe-shell-v2|breathe-shell-v3|breathe-shell-v4/.test(sw), "service worker must not keep an older cache name");
 ["privacy.html", "support.html", "icon-180.png", "icon-1024.png", "icon-maskable-512.png"].forEach(function (asset) {
   assert(sw.includes(asset), "service worker must cache " + asset);
 });
@@ -604,11 +604,11 @@ const storeDoc = readFileSync(path.join(root, "APP_STORE.md"), "utf8");
 assert(/no account/i.test(privacy) && /analytics/i.test(privacy) && /tracking/i.test(privacy), "privacy policy must say there is no account, analytics, or tracking");
 assert(/localStorage/.test(privacy) && /third part/i.test(privacy), "privacy policy must say preferences stay in localStorage and there are no third parties");
 assert(/October 9, 2026/.test(privacy), "privacy policy effective date must be October 9, 2026");
-assert(/support@example\.com/.test(privacy) && /REPLACE support@example\.com before publishing/.test(privacy), "privacy page must use the placeholder contact");
+assert(/noodleelder@gmail\.com/.test(privacy) && !/support@example\.com/.test(privacy) && !/REPLACE support@example\.com/.test(privacy), "privacy page must show noodleelder@gmail.com");
 assert(/href="\.\/"/.test(privacy) || /href="index\.html"/.test(privacy), "privacy page must link back to the app");
 assert(/viewport-fit=cover/.test(privacy) && /apple-mobile-web-app-capable/.test(privacy), "privacy page must carry the iOS viewport meta");
 assert(/silent/i.test(support) && /haptic/i.test(support) && /reset/i.test(support), "support page must cover silent mode, haptics, and reset");
-assert(/support@example\.com/.test(support) && /REPLACE support@example\.com before publishing/.test(support), "support page must use the placeholder contact");
+assert(/noodleelder@gmail\.com/.test(support) && !/support@example\.com/.test(support) && !/REPLACE support@example\.com/.test(support), "support page must show noodleelder@gmail.com");
 assert(/href="\.\/"/.test(support), "support page must link back to the app");
 assert(/viewport-fit=cover/.test(support), "support page must set viewport-fit=cover");
 assert(/com\.TODO\.breathe/.test(storeDoc), "APP_STORE.md must include the bundle id placeholder");
@@ -616,7 +616,7 @@ assert(/Data Not Collected/.test(storeDoc), "APP_STORE.md must answer App Privac
 assert(/4\.2/.test(storeDoc) && /haptic/i.test(storeDoc) && /notification/i.test(storeDoc), "APP_STORE.md must cover guideline 4.2 and native haptics / reminders");
 assert(/treatment/.test(storeDoc) && /cure/.test(storeDoc), "APP_STORE.md must caution against treatment and cure claims");
 assert(/6\.9/.test(storeDoc) && /6\.7/.test(storeDoc) && /6\.5/.test(storeDoc) && /iPad/.test(storeDoc), "APP_STORE.md must list iPhone and iPad screenshot sizes");
-assert(/REPLACE support@example\.com with the dedicated support address before publishing/.test(storeDoc), "APP_STORE.md must flag the placeholder contact");
+assert(/noodleelder@gmail\.com/.test(storeDoc) && !/support@example\.com/.test(storeDoc), "APP_STORE.md must list noodleelder@gmail.com");
 assert(/TODO/.test(storeDoc), "APP_STORE.md must list owner decisions as TODO");
 const pagesOrigin = "https://" + "taraannplimpton-arch.github.io/breathing-app/";
 assert(storeDoc.includes(pagesOrigin + "privacy.html"), "APP_STORE.md must document the privacy URL");

@@ -2,8 +2,6 @@
 
 Wrap this static app for iOS. The site is the whole product: offline shell, six breathing cards, about / privacy / support. Do not add accounts or a backend for the wrapper.
 
-TODO: REPLACE support@example.com with the dedicated support address before publishing.
-
 ## Identity
 
 | Item | Value |
@@ -13,7 +11,7 @@ TODO: REPLACE support@example.com with the dedicated support address before publ
 | Version | `APP_VERSION` in `protocols.js` (currently 1.4.0). Keep the wrapper version in step with it. |
 | Privacy policy URL | https://taraannplimpton-arch.github.io/breathing-app/privacy.html |
 | Support URL | https://taraannplimpton-arch.github.io/breathing-app/support.html |
-| Contact shown in the app | support@example.com (placeholder) |
+| Contact shown in the app | noodleelder@gmail.com |
 | Category | Health & Fitness, or Lifestyle if Health invites medical review |
 | Devices | TODO: iPhone only, or iPhone and iPad |
 
@@ -74,7 +72,6 @@ TODO: if the binary is iPhone-only, do not upload iPad screenshots; say so in Ap
 
 ## Decisions the owner must make
 
-- TODO: REPLACE support@example.com with the dedicated support address before publishing. Update privacy.html, support.html, About, and this file. Do not use a personal inbox.
 - TODO: bundle id. Replace `com.TODO.breathe`.
 - TODO: Apple Developer team and who uploads the build.
 - TODO: confirm the name “Breathe” is available, or pick another display name. The manifest name is Breathe.

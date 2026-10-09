@@ -29,7 +29,7 @@ Published pages, once the site is public:
 - https://taraannplimpton-arch.github.io/breathing-app/privacy.html
 - https://taraannplimpton-arch.github.io/breathing-app/support.html
 
-The contact address in the app is the placeholder support@example.com until it is replaced. See `APP_STORE.md`.
+The contact address in the app is noodleelder@gmail.com. See `APP_STORE.md`.
 
 No build step. No dependencies. No requests to other sites.
 
@@ -172,7 +172,7 @@ From a served origin (`python3 -m http.server` or any HTTPS host, including GitH
 
 1. Open the app in Chrome, Safari, or Edge.
 2. Use **Add to Home Screen** / **Install app**.
-3. The manifest (`manifest.webmanifest`) and a small service worker (`sw.js`, cache `breathe-shell-v4`) cache the static shell — `index.html`, `privacy.html`, `support.html`, scripts, styles, and icons — so the app still opens offline.
+3. The manifest (`manifest.webmanifest`) and a small service worker (`sw.js`, cache `breathe-shell-v5`) cache the static shell — `index.html`, `privacy.html`, `support.html`, scripts, styles, and icons — so the app still opens offline.
 
 Icons: `icon-192.png`, `icon-512.png`, opaque `icon-1024.png` (no transparency, square corners), `icon-180.png` for Apple touch, and a maskable `icon-maskable-512.png` whose circle sits inside the safe zone. They are derived from `favicon.svg`.
 
