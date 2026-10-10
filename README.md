@@ -1,6 +1,6 @@
-# Breathwork
+# Practical Breathing
 
-A single-page breathing practice. The listing, manifest, Apple title, and About name are **Breathwork**. The home wordmark stays the lowercase “breathe” lockup.
+A single-page breathing practice. The listing, manifest name, Apple title, About name, and home wordmark are **Practical Breathing**. The manifest short name is **Breathing**.
 
 Six cards: **Calm Down**, **Energy**, **HRV**, **Focus**, **Sleep**, and **Think First**. Timed sessions last 1, 2, 5, or 10 minutes (default five). Energy is capped at one minute. **Think First** is about 3 minutes. It ignores the duration picker and skips body setup. Nothing from Think First is saved. Its internal id stays `urge`, so a saved `urge` still opens this card.
 
@@ -180,7 +180,7 @@ From a served origin (`python3 -m http.server` or any HTTPS host, including GitH
 
 1. Open the app in Chrome, Safari, or Edge.
 2. Use **Add to Home Screen** / **Install app**.
-3. The manifest (`manifest.webmanifest`, name Breathwork) and a small service worker (`sw.js`, cache `breathe-shell-v8`) cache the static shell — `index.html`, `privacy.html`, `support.html`, scripts, styles, and icons — so the app still opens offline.
+3. The manifest (`manifest.webmanifest`, name Practical Breathing, short name Breathing) and a small service worker (`sw.js`, cache `breathe-shell-v9`) cache the static shell — `index.html`, `privacy.html`, `support.html`, scripts, styles, and icons — so the app still opens offline.
 
 Icons: `icon-192.png`, `icon-512.png`, opaque `icon-1024.png` (no transparency, square corners), `icon-180.png` for Apple touch, and a maskable `icon-maskable-512.png` whose circle sits inside the safe zone. They are derived from `favicon.svg`.
 

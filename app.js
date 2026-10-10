@@ -1443,15 +1443,15 @@
     const first = items[0];
     const last = items[items.length - 1];
     const active = document.activeElement;
-    const inside = root && active && root.contains(active);
+    const onItem = items.indexOf(active) !== -1;
     if (event.shiftKey) {
-      if (!inside || active === first) {
+      if (!onItem || active === first) {
         event.preventDefault();
         last.focus();
       }
       return;
     }
-    if (!inside || active === last) {
+    if (!onItem || active === last) {
       event.preventDefault();
       first.focus();
     }
@@ -1475,10 +1475,11 @@
       homeEl.setAttribute("aria-hidden", "true");
     }
     window.requestAnimationFrame(function () {
-      if (!settingsActive || !settingsCloseEl || typeof settingsCloseEl.focus !== "function") {
+      const focusTarget = settingsPanelEl || settingsEl;
+      if (!settingsActive || !focusTarget || typeof focusTarget.focus !== "function") {
         return;
       }
-      settingsCloseEl.focus();
+      focusTarget.focus({ preventScroll: true });
     });
   }
 

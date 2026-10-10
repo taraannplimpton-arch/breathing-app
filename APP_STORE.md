@@ -6,8 +6,8 @@ Wrap this static app for iOS. The site is the whole product: offline shell, six 
 
 | Item | Value |
 | --- | --- |
-| App name | Breathwork |
-| Name fallbacks (in order) | Practical Breathing, then Breathing Protocols |
+| App name | Practical Breathing |
+| Name fallback | Breathing Protocols |
 | Subtitle | Breathing for any moment |
 | Promotional text | Free. No account. No ads. Nothing leaves your phone. |
 | Bundle id | `com.TODO.breathe` |
@@ -18,7 +18,9 @@ Wrap this static app for iOS. The site is the whole product: offline shell, six 
 | Category | Health & Fitness, or Lifestyle if Health invites medical review |
 | Devices | TODO: iPhone only, or iPhone and iPad |
 
-Do not put a duration, or calm / focus / sleep, in the name. The home wordmark can stay the lowercase “breathe” lockup; the listing, manifest, Apple title, and About name are Breathwork.
+“Breathwork” is already taken on the App Store (Hollr People Limited, id6740619490). Do not use it. The fallback name is Breathing Protocols.
+
+Do not put a duration, or calm / focus / sleep, in the name. The home wordmark, listing, manifest name, Apple title, and About name are Practical Breathing. The manifest short name is Breathing.
 
 The manifest is already scoped for GitHub Pages: `id`, `scope`, and `start_url` are `/breathing-app/`. Icon files include 192, 512, opaque 1024 (no alpha, no rounded corners), 180 for the home-screen touch icon, and a maskable 512.
 
@@ -102,7 +104,7 @@ TODO: if the binary is iPhone-only, do not upload iPad screenshots; say so in Ap
 
 - TODO: bundle id. Replace `com.TODO.breathe`.
 - TODO: Apple Developer team and who uploads the build.
-- TODO: confirm the name “Breathwork” is available. Fallbacks in order: Practical Breathing, then Breathing Protocols. The manifest name is Breathwork.
+- TODO: “Breathwork” is already taken on the App Store (Hollr People Limited, id6740619490). Primary name is Practical Breathing. Fallback: Breathing Protocols. The manifest name is Practical Breathing; short_name is Breathing.
 - TODO: Median (haptics only) or Despia (haptics and the on-device reminder), and the wrapper’s minimum iOS version.
 - TODO: iPhone only, or iPhone and iPad.
 - TODO: Apple Health stays off until a wrapper can write a Mindful Session category sample. Recheck App Privacy before enabling it. Reminder copy is fixed and the control stays off until the person opts in.

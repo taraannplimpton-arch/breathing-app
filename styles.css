@@ -167,21 +167,30 @@ body[data-mood="still"] .atmosphere {
   color: var(--cream);
 }
 
+.text-btn:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .text-btn:focus-visible {
-  outline: 2px solid var(--cream);
+  outline: 1px solid rgba(236, 231, 220, 0.38);
   outline-offset: 3px;
 }
 
 .brand {
   text-align: center;
+  width: 100%;
+  max-width: 16.5rem;
+  margin-top: 0.85rem;
 }
 
 .brand h1 {
   margin: 0;
-  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  max-width: 100%;
+  font-size: clamp(1.55rem, 6.4vw, 2.15rem);
   font-weight: 500;
-  letter-spacing: 0.18em;
-  text-transform: lowercase;
+  letter-spacing: 0.03em;
+  line-height: 1.12;
+  text-wrap: balance;
 }
 
 .brand p,
@@ -375,6 +384,10 @@ body[data-mood="still"] .atmosphere {
   background: #161411;
   color: var(--cream);
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.sheet-panel:focus {
+  outline: none;
 }
 
 .sheet-head {
