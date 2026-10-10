@@ -34,6 +34,11 @@
   const URGE = window.BREATHING.URGE;
 
   const homeEl = document.getElementById("home");
+  const settingsEl = document.getElementById("settings");
+  const settingsPanelEl = document.getElementById("settings-panel");
+  const settingsOpenEl = document.getElementById("settings-open");
+  const settingsCloseEl = document.getElementById("settings-close");
+  const settingsBackdropEl = document.getElementById("settings-backdrop");
   const aboutEl = document.getElementById("about");
   const aboutOpenEl = document.getElementById("about-open");
   const aboutCloseEl = document.getElementById("about-close");
@@ -105,6 +110,7 @@
   let urgeGuideNext = null;
   let urgeWaveHeld = false;
   let aboutActive = false;
+  let settingsActive = false;
   let wakeLockWanted = false;
   let wakeLockSentinel = null;
 
@@ -241,14 +247,21 @@
     return text;
   }
 
+  function setSwitch(el, on) {
+    if (!el) {
+      return;
+    }
+    el.setAttribute("aria-checked", on ? "true" : "false");
+  }
+
   function syncHumPrefUi() {
-    if (!prefHumWrapEl) {
+    if (!prefHumEl) {
       return;
     }
     const allowed = selectedId === "rest" || selectedId === "sleep";
-    prefHumWrapEl.hidden = !allowed;
-    if (prefHumEl) {
-      prefHumEl.disabled = !allowed;
+    prefHumEl.disabled = !allowed;
+    if (prefHumWrapEl) {
+      prefHumWrapEl.classList.toggle("is-unavailable", !allowed);
     }
   }
 
@@ -256,14 +269,17 @@
     if (!prefHapticsEl) {
       return;
     }
+    const wrap = prefHapticsEl.closest(".switch-row");
     if (hapticsSupported) {
       prefHapticsEl.disabled = false;
+      if (wrap) {
+        wrap.classList.remove("is-unavailable");
+      }
       return;
     }
     prefs.haptics = false;
-    prefHapticsEl.checked = false;
+    setSwitch(prefHapticsEl, false);
     prefHapticsEl.disabled = true;
-    const wrap = prefHapticsEl.closest(".pref");
     if (wrap) {
       wrap.classList.add("is-unavailable");
     }
@@ -279,15 +295,11 @@
     prefs.bodySetup = readPref(PREF_KEYS.bodySetup, true);
     prefs.hum = readPref(PREF_KEYS.hum);
     selectedMinutes = readDurationMinutes();
-    prefTimerEl.checked = prefs.alwaysTimer;
-    prefAudioEl.checked = prefs.audio;
-    prefHapticsEl.checked = prefs.haptics;
-    if (prefBodySetupEl) {
-      prefBodySetupEl.checked = prefs.bodySetup;
-    }
-    if (prefHumEl) {
-      prefHumEl.checked = prefs.hum;
-    }
+    setSwitch(prefTimerEl, prefs.alwaysTimer);
+    setSwitch(prefAudioEl, prefs.audio);
+    setSwitch(prefHapticsEl, prefs.haptics);
+    setSwitch(prefBodySetupEl, prefs.bodySetup);
+    setSwitch(prefHumEl, prefs.hum);
     applyHapticsAvailability();
     syncDurationUi();
     syncHumPrefUi();
@@ -323,6 +335,16 @@
       haloEl.classList.toggle("is-foreshadow", foreshadow);
     }
     bubbleEl.classList.toggle("is-foreshadow", foreshadow);
+  }
+
+  function cardAccessibleName(id, pattern) {
+    const name = pattern.homeLabel || "";
+    const protocol = pattern.protocol || "";
+    let description = pattern.technique || "";
+    if (id === "urge" && URGE) {
+      description = [URGE.technique, URGE.description].filter(Boolean).join(" ");
+    }
+    return name + ", " + protocol + ". " + description;
   }
 
   function cardSpec(id) {
@@ -445,7 +467,7 @@
       button.className = "pattern" + (id === selectedId ? " is-selected" : "");
       button.setAttribute("role", "option");
       button.setAttribute("aria-selected", id === selectedId ? "true" : "false");
-      button.setAttribute("aria-label", pattern.homeLabel);
+      button.setAttribute("aria-label", cardAccessibleName(id, pattern));
       button.dataset.pattern = id;
       button.style.setProperty("--accent", pattern.colors.inhale.fill);
 
@@ -1293,8 +1315,95 @@
     };
   }
 
+  function focusableIn(root) {
+    if (!root) {
+      return [];
+    }
+    const nodes = root.querySelectorAll("button, [href], input, select, textarea, [tabindex]");
+    return Array.prototype.filter.call(nodes, function (el) {
+      if (el.disabled || el.getAttribute("aria-hidden") === "true" || el.tabIndex < 0) {
+        return false;
+      }
+      if (el.closest("[hidden]")) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  function trapSettingsFocus(event) {
+    const root = settingsPanelEl || settingsEl;
+    const items = focusableIn(root);
+    if (!items.length) {
+      event.preventDefault();
+      return;
+    }
+    const first = items[0];
+    const last = items[items.length - 1];
+    const active = document.activeElement;
+    const inside = root && active && root.contains(active);
+    if (event.shiftKey) {
+      if (!inside || active === first) {
+        event.preventDefault();
+        last.focus();
+      }
+      return;
+    }
+    if (!inside || active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function openSettings() {
+    if (settingsActive || aboutActive || clock.isRunning() || clock.isPaused() || completing || prerollActive || urgeGuideActive || urgePhase) {
+      return;
+    }
+    settingsActive = true;
+    if (settingsOpenEl) {
+      settingsOpenEl.setAttribute("aria-expanded", "true");
+    }
+    if (settingsEl) {
+      settingsEl.hidden = false;
+      settingsEl.classList.remove("is-hidden");
+    }
+    document.body.classList.add("is-settings");
+    if (homeEl) {
+      homeEl.setAttribute("inert", "");
+      homeEl.setAttribute("aria-hidden", "true");
+    }
+    window.requestAnimationFrame(function () {
+      if (!settingsActive || !settingsCloseEl || typeof settingsCloseEl.focus !== "function") {
+        return;
+      }
+      settingsCloseEl.focus();
+    });
+  }
+
+  function closeSettings() {
+    if (!settingsActive) {
+      return;
+    }
+    settingsActive = false;
+    if (settingsOpenEl) {
+      settingsOpenEl.setAttribute("aria-expanded", "false");
+    }
+    if (settingsEl) {
+      settingsEl.hidden = true;
+      settingsEl.classList.add("is-hidden");
+    }
+    document.body.classList.remove("is-settings");
+    if (homeEl) {
+      homeEl.removeAttribute("inert");
+      homeEl.removeAttribute("aria-hidden");
+    }
+    if (settingsOpenEl && typeof settingsOpenEl.focus === "function") {
+      settingsOpenEl.focus();
+    }
+  }
+
   function showAbout() {
-    if (clock.isRunning() || clock.isPaused() || completing || prerollActive || urgeGuideActive || urgePhase) {
+    if (settingsActive || clock.isRunning() || clock.isPaused() || completing || prerollActive || urgeGuideActive || urgePhase) {
       return;
     }
     aboutActive = true;
@@ -1364,7 +1473,40 @@
     renderHome();
   }
 
+  function bindSwitch(el, apply) {
+    if (!el) {
+      return;
+    }
+    el.addEventListener("click", function () {
+      if (el.disabled) {
+        return;
+      }
+      const next = el.getAttribute("aria-checked") !== "true";
+      setSwitch(el, next);
+      apply(next);
+    });
+    const row = el.closest(".switch-row");
+    if (!row) {
+      return;
+    }
+    row.addEventListener("click", function (event) {
+      if (event.target === el || el.contains(event.target) || el.disabled) {
+        return;
+      }
+      el.click();
+    });
+  }
+
   startEl.addEventListener("click", requestStart);
+  if (settingsOpenEl) {
+    settingsOpenEl.addEventListener("click", openSettings);
+  }
+  if (settingsCloseEl) {
+    settingsCloseEl.addEventListener("click", closeSettings);
+  }
+  if (settingsBackdropEl) {
+    settingsBackdropEl.addEventListener("click", closeSettings);
+  }
   if (aboutOpenEl) {
     aboutOpenEl.addEventListener("click", showAbout);
   }
@@ -1431,39 +1573,47 @@
     });
   }
 
-  prefTimerEl.addEventListener("change", function () {
-    prefs.alwaysTimer = prefTimerEl.checked;
+  bindSwitch(prefTimerEl, function (on) {
+    prefs.alwaysTimer = on;
     writePref(PREF_KEYS.alwaysTimer, prefs.alwaysTimer);
   });
-  prefAudioEl.addEventListener("change", function () {
-    prefs.audio = prefAudioEl.checked;
+  bindSwitch(prefAudioEl, function (on) {
+    prefs.audio = on;
     writePref(PREF_KEYS.audio, prefs.audio);
   });
-  prefHapticsEl.addEventListener("change", function () {
+  bindSwitch(prefHapticsEl, function (on) {
     if (!hapticsSupported) {
-      prefHapticsEl.checked = false;
+      setSwitch(prefHapticsEl, false);
       prefs.haptics = false;
       return;
     }
-    prefs.haptics = prefHapticsEl.checked;
+    prefs.haptics = on;
     writePref(PREF_KEYS.haptics, prefs.haptics);
   });
-  if (prefBodySetupEl) {
-    prefBodySetupEl.addEventListener("change", function () {
-      prefs.bodySetup = prefBodySetupEl.checked;
-      writePref(PREF_KEYS.bodySetup, prefs.bodySetup);
-    });
-  }
-  if (prefHumEl) {
-    prefHumEl.addEventListener("change", function () {
-      prefs.hum = prefHumEl.checked;
-      writePref(PREF_KEYS.hum, prefs.hum);
-      previewHomeAtmosphere();
-    });
-  }
+  bindSwitch(prefBodySetupEl, function (on) {
+    prefs.bodySetup = on;
+    writePref(PREF_KEYS.bodySetup, prefs.bodySetup);
+  });
+  bindSwitch(prefHumEl, function (on) {
+    prefs.hum = on;
+    writePref(PREF_KEYS.hum, prefs.hum);
+    previewHomeAtmosphere();
+  });
 
   document.addEventListener("keydown", function (event) {
     const key = event.key;
+
+    if (settingsActive) {
+      if (key === "Escape") {
+        event.preventDefault();
+        closeSettings();
+        return;
+      }
+      if (key === "Tab") {
+        trapSettingsFocus(event);
+      }
+      return;
+    }
 
     if (aboutActive) {
       if (key === "Escape") {
@@ -1548,7 +1698,13 @@
       renderHome();
     }
     if (key === "Enter") {
-      if (event.target === aboutOpenEl || event.target === resetSettingsEl) {
+      if (
+        event.target === aboutOpenEl ||
+        event.target === resetSettingsEl ||
+        event.target === settingsOpenEl ||
+        event.target === settingsCloseEl ||
+        (event.target && event.target.getAttribute && event.target.getAttribute("role") === "switch")
+      ) {
         return;
       }
       requestStart();

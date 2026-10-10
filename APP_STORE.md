@@ -8,7 +8,7 @@ Wrap this static app for iOS. The site is the whole product: offline shell, six 
 | --- | --- |
 | App name | Breathe |
 | Bundle id | `com.TODO.breathe` |
-| Version | `APP_VERSION` in `protocols.js` (currently 1.4.0). Keep the wrapper version in step with it. |
+| Version | `APP_VERSION` in `protocols.js` (currently 1.5.0). Keep the wrapper version in step with it. |
 | Privacy policy URL | https://taraannplimpton-arch.github.io/breathing-app/privacy.html |
 | Support URL | https://taraannplimpton-arch.github.io/breathing-app/support.html |
 | Contact shown in the app | noodleelder@gmail.com |

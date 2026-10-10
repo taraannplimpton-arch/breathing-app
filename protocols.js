@@ -1,6 +1,6 @@
 (function (root) {
   const BREATHING = {
-    APP_VERSION: "1.4.0",
+    APP_VERSION: "1.5.0",
     SESSION_MS: 5 * 60 * 1000,
     DURATION_MINUTES: [1, 2, 5, 10],
     MIN_SCALE: 0.42,

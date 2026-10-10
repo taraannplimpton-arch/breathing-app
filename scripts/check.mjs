@@ -38,7 +38,8 @@ assert(engine.formatTime(2 * 60 * 1000) === "2:00", "2-minute remaining formats 
 assert(engine.formatTime(10 * 60 * 1000) === "10:00", "10-minute remaining formats as 10:00");
 assert(breathing.MIN_SCALE < breathing.MAX_SCALE, "bubble must have room to grow");
 assert(Object.keys(breathing.PATTERNS).length === 5, "there must be exactly five timed patterns");
-assert(breathing.APP_VERSION === "1.4.0", "APP_VERSION must be 1.4.0");
+assert(breathing.APP_VERSION === "1.5.0", "APP_VERSION must be 1.5.0");
+assert((protocolsSrc.match(/1\.5\.0/g) || []).length === 1, "1.5.0 must be a single constant in protocols.js");
 assert(!Object.prototype.hasOwnProperty.call(breathing, "QUICK_RESET_CYCLES"), "Quick Reset config must be removed");
 
 const expected = {
@@ -434,17 +435,18 @@ assert(/id="durations"/.test(html), "home needs a duration control");
 assert(/data-minutes="1"/.test(html) && /data-minutes="2"/.test(html) && /data-minutes="5"/.test(html) && /data-minutes="10"/.test(html), "duration control must list 1, 2, 5, and 10 minutes");
 assert(/data-minutes="5"[^>]*aria-checked="true"|class="duration is-selected"[^>]*data-minutes="5"/.test(html), "5 minutes must be the default selected duration in markup");
 assert(/>5:00</.test(html), "default remaining in markup is 5:00");
-assert(/id="pref-timer"/.test(html) && /id="pref-audio"/.test(html) && /id="pref-haptics"/.test(html), "home needs timer, audio, and haptics toggles");
-assert(!/id="pref-timer"[^>]*checked/.test(html), "Always show timer must default off");
-assert(!/id="pref-audio"[^>]*checked/.test(html), "audio must default off");
-assert(!/id="pref-haptics"[^>]*checked/.test(html), "haptics must default off");
+assert(/id="pref-timer"/.test(html) && /id="pref-audio"/.test(html) && /id="pref-haptics"/.test(html), "settings needs timer, audio, and haptics switches");
+assert(/id="pref-timer"[^>]*aria-checked="false"/.test(html), "Always show timer must default off");
+assert(/id="pref-audio"[^>]*aria-checked="false"/.test(html), "audio must default off");
+assert(/id="pref-haptics"[^>]*aria-checked="false"/.test(html), "haptics must default off");
+assert(!/<input[^>]*type="checkbox"/i.test(html), "preferences must be switches, not checkboxes");
 assert(!/id="quick-reset"/.test(html) && !/Quick Reset/.test(html), "home must not show Quick Reset");
 assert(!/id="needs"/.test(html) && !/data-need=/.test(html), "home must not show need chips");
 assert(!/>Spike</.test(html) && !/>Fog</.test(html) && !/>Low energy</.test(html), "need-chip labels must be gone");
 assert(/id="preroll"/.test(html) && /id="preroll-cue"/.test(html), "body-setup pre-roll screen must exist outside the session");
 assert(html.indexOf('id="preroll"') < html.indexOf('id="session"'), "pre-roll must come before the session screen");
-assert(/id="pref-body-setup"/.test(html) && /id="pref-body-setup"[^>]*checked/.test(html), "Body setup before sessions must default ON in markup");
-assert(/id="pref-hum"/.test(html) && !/id="pref-hum"[^>]*checked/.test(html), "Hum on the exhale must default off");
+assert(/id="pref-body-setup"/.test(html) && /id="pref-body-setup"[^>]*aria-checked="true"/.test(html), "Body setup before sessions must default ON in markup");
+assert(/id="pref-hum"/.test(html) && /id="pref-hum"[^>]*aria-checked="false"/.test(html), "Hum on the exhale must default off");
 assert(/id="duration-note"/.test(html), "Energy cap needs a duration note element");
 assert(/Feet/.test(js) && /Stack/.test(js) && /Hands/.test(js) && /Jaw/.test(js) && /Eyes/.test(js) && /Exhale/.test(js), "pre-roll cues must cycle Feet Stack Hands Jaw Eyes Exhale");
 assert(!/\b(Feet|Stack|Hands|Jaw)\b/.test(sessionChunk), "pre-roll cue words must not appear in the session screen");
@@ -454,7 +456,9 @@ const aboutAt = html.indexOf('id="about"');
 const aboutChunk = aboutAt >= 0 ? html.slice(aboutAt, html.indexOf('id="preroll"')) : "";
 assert(aboutAt > 0 && aboutAt < html.indexOf('id="preroll"'), "about screen must sit with the other screens");
 assert(/id="about-open"[^>]*aria-label="Information"/.test(html), "home needs an Information control with an accessible name");
-assert(/id="about-open"[^>]*>\s*INFORMATION\s*<\/button>/.test(html), "home Information control must be a text button");
+assert(/id="about-open"[^>]*>\s*Information\s*<\/button>/.test(html), "home Information control must be a sentence-case text button");
+assert(!/>\s*INFORMATION\s*</.test(html), "home must not use an uppercase INFORMATION label");
+assert(/id="settings-open"[^>]*>\s*Settings\s*<\/button>/.test(html), "home needs a sentence-case Settings text button");
 const aboutOpenTag = html.slice(html.indexOf('id="about-open"'), html.indexOf('id="about-open"') + 400);
 assert(aboutOpenTag.indexOf("</button>") > 0 && !/<svg/.test(aboutOpenTag.slice(0, aboutOpenTag.indexOf("</button>"))), "Information control must not use an icon svg");
 assert(/id="reset-settings"/.test(html) && /Reset settings/.test(html), "about needs a Reset settings button");
@@ -465,6 +469,11 @@ assert(/not medical advice/.test(aboutChunk) && /not for emergencies/.test(about
 assert(!aboutChunk.includes(drinkingLine), "about must not include the heavy-drinking line");
 assert(/Think First/.test(aboutChunk), "about must name Think First");
 assert(aboutChunk.includes(thinkFirstDescription), "about must include the Think First description");
+{
+  const howPara = (html.match(/id="about-how"[^>]*>([\s\S]*?)<\/p>/) || [])[1] || "";
+  assert(howPara.length > 0 && !/airport candy/.test(howPara), "the Think First scene line must leave the how-to paragraph");
+  assert(/id="about-think"[\s\S]{0,240}Think First:/.test(aboutChunk), "Think First scene line must be its own sentence");
+}
 assert(/aria-label="Think First"/.test(html), "the guide screen must be named Think First");
 assert(/noodleelder@gmail\.com/.test(aboutChunk) && !/support@example\.com/.test(aboutChunk), "about must show noodleelder@gmail.com");
 assert(html.includes(breathing.URGE.lines.respond), "respond screen must ask what's your next move");
@@ -486,6 +495,70 @@ assert(css.includes(".urge-wave") && css.includes("--urge-level"), "the urge wav
 assert(/prefers-reduced-motion[\s\S]*\.urge-wave/.test(css) && /body\.reduce-motion \.urge-wave/.test(css), "reduced motion must keep the urge wave still");
 assert(css.includes('data-mood="still"'), "Ride the Urge mood must be styled");
 assert(css.includes('data-mood="calm"') && css.includes('data-mood="bright"'), "Rest atmosphere must be distinct/dimmer than Energy");
+
+const homeChunk = html.slice(html.indexOf('id="home"'), html.indexOf('id="settings"'));
+const settingsChunk = html.slice(html.indexOf('id="settings"'), html.indexOf('id="about"'));
+assert(homeChunk.length > 0 && !/id="pref-/.test(homeChunk), "preference switches must not sit on the home screen");
+assert(/role="dialog"/.test(settingsChunk) && /aria-modal="true"/.test(settingsChunk) && /aria-labelledby="settings-title"/.test(settingsChunk), "settings must be a modal dialog");
+assert(/id="settings-close"/.test(settingsChunk) && />\s*Close\s*</.test(settingsChunk), "settings dialog needs a Close button");
+["pref-timer", "pref-audio", "pref-haptics", "pref-body-setup", "pref-hum"].forEach(function (id) {
+  assert(new RegExp('id="' + id + '"[^>]*role="switch"').test(settingsChunk), id + " must be a switch in the settings sheet");
+});
+assert(/id="pref-hum-note"/.test(settingsChunk) && /Only for Calm Down and Sleep/.test(settingsChunk), "hum switch must note it is only for Calm Down and Sleep");
+assert(/prefHumEl\.disabled\s*=\s*!allowed/.test(js), "hum switch must disable unless Calm Down or Sleep is selected");
+assert(/function openSettings/.test(js) && /function closeSettings/.test(js) && /function trapSettingsFocus/.test(js), "settings sheet must open, close, and trap focus");
+assert(/settingsActive[\s\S]{0,200}Escape[\s\S]{0,120}closeSettings\(/.test(js), "Escape must close the settings sheet");
+const sessionListen = js.indexOf('sessionEl.addEventListener("click"');
+const sessionListenBody = sessionListen >= 0 ? js.slice(sessionListen, js.indexOf("if (prerollEl)", sessionListen)) : "";
+assert(sessionListen !== -1 && !/togglePause/.test(sessionListenBody), "tapping the session screen must not pause");
+assert(/pauseBtn\.addEventListener\("click"[\s\S]{0,180}togglePause\(/.test(js), "pause stays on the Pause button");
+assert(/key === " " \|\| key === "Spacebar"[\s\S]{0,400}togglePause\(\)/.test(js), "Space still pauses for keyboard users");
+assert(/visibilitychange/.test(js) && /visibilityState === "hidden"/.test(js), "background auto-pause must stay");
+assert(/font:\s*-apple-system-body/.test(css), "root text must use -apple-system-body so user text size is respected");
+[".text-btn", ".session-btn", ".duration", ".duration-note", ".pattern-protocol", ".preroll-hint", ".switch-label"].forEach(function (sel) {
+  const escaped = sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const body = (css.match(new RegExp(escaped + "\\s*\\{([^}]*)\\}")) || [])[1] || "";
+  assert(body.length > 0, "missing style " + sel);
+  assert(!/text-transform:\s*uppercase/.test(body), sel + " must not use tiny uppercase");
+  assert(/font-size:\s*(0\.94rem|1rem|1\.125rem)/.test(body), sel + " must use a sentence-case size around 15–17px");
+});
+[".text-btn", ".session-btn", ".duration", ".switch"].forEach(function (sel) {
+  const escaped = sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const body = (css.match(new RegExp(escaped + "\\s*\\{([^}]*)\\}")) || [])[1] || "";
+  assert(/min-height:\s*2\.75rem/.test(body), sel + " hit area must be at least 44px");
+});
+function contrastChannel(c) {
+  const s = c / 255;
+  return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+}
+function contrastLuminance(rgb) {
+  return 0.2126 * contrastChannel(rgb[0]) + 0.7152 * contrastChannel(rgb[1]) + 0.0722 * contrastChannel(rgb[2]);
+}
+function contrastRatio(fg, bg) {
+  const lighter = Math.max(contrastLuminance(fg), contrastLuminance(bg));
+  const darker = Math.min(contrastLuminance(fg), contrastLuminance(bg));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+function parseHex(hex) {
+  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
+}
+const creamHex = (css.match(/--cream:\s*(#[0-9a-fA-F]{6})/) || [])[1];
+const mutedHex = (css.match(/--muted:\s*(#[0-9a-fA-F]{6})/) || [])[1];
+const inkHexes = [];
+const inkRe = /--ink:\s*(#[0-9a-fA-F]{6})/g;
+let inkMatch;
+while ((inkMatch = inkRe.exec(css))) {
+  inkHexes.push(inkMatch[1]);
+}
+const sheetHex = (css.match(/\.sheet-panel\s*\{[^}]*background:\s*(#[0-9a-fA-F]{6})/) || [])[1];
+assert(Boolean(creamHex) && Boolean(mutedHex) && inkHexes.length >= 4 && Boolean(sheetHex), "main text colors must be defined");
+inkHexes.concat([sheetHex]).forEach(function (bg) {
+  assert(contrastRatio(parseHex(mutedHex), parseHex(bg)) >= 4.5, "secondary text " + mutedHex + " on " + bg + " must be at least 4.5:1");
+  assert(contrastRatio(parseHex(creamHex), parseHex(bg)) >= 4.5, "primary text " + creamHex + " on " + bg + " must be at least 4.5:1");
+});
+const nameFn = js.slice(js.indexOf("function cardAccessibleName"), js.indexOf("function cardSpec"));
+assert(/homeLabel/.test(nameFn) && /protocol/.test(nameFn) && /technique/.test(nameFn) && /description/.test(nameFn), "card accessible name includes name, pattern, and description");
+assert(/setAttribute\(\s*"aria-label"\s*,\s*cardAccessibleName\(/.test(js), "cards must expose that accessible name");
 assert(js.includes("requestAnimationFrame"), "session animation must be clock-driven");
 assert(engineSrc.includes("phaseAt") && engineSrc.includes("scaleFor"), "bubble size must follow real phase durations");
 assert(js.includes("keydown") && js.includes("Escape") && js.includes(" "), "Space and Escape handling must exist");
@@ -542,9 +615,9 @@ assert(js.includes(vibrateSupportCheck), "app.js must detect vibrate support at 
 const supportCheckIdx = js.indexOf(vibrateSupportCheck);
 const maybeHapticIdx = js.indexOf("function maybeHaptic");
 assert(supportCheckIdx !== -1 && (maybeHapticIdx === -1 || supportCheckIdx < maybeHapticIdx), "vibrate support must be computed once at load, not only inside maybeHaptic");
-assert(/prefHapticsEl\.disabled\s*=\s*true/.test(js), "unsupported path must disable the haptics checkbox");
+assert(/prefHapticsEl\.disabled\s*=\s*true/.test(js), "unsupported path must disable the haptics switch");
 assert(/not available on this device|not supported|iPhone not supported/i.test(js), "unsupported path must relabel haptics as unavailable");
-assert(/prefHapticsEl\.checked\s*=\s*false/.test(js), "unsupported path must not leave a stored-on haptics preference looking enabled");
+assert(/setSwitch\(\s*prefHapticsEl\s*,\s*false\s*\)/.test(js), "unsupported path must not leave a stored-on haptics preference looking enabled");
 assert(/if\s*\(\s*hapticsSupported\s*\)[\s\S]{0,80}navigator\.vibrate/.test(js), "navigator.vibrate must stay gated by the load-time support result");
 assert(/first \|\| clock\.isPaused\(\) \|\| completing \|\| !prefs\.haptics/.test(js), "supported haptic path must still skip first paint, pause, complete, and toggle-off");
 assert(/navigator\.vibrate\(\s*12\s*\)/.test(js), "supported path must still light-vibrate on phase change");
@@ -613,7 +686,7 @@ assert(/-webkit-touch-callout:\s*none/.test(css), "long-press callouts must be d
 assert(/touch-action:\s*manipulation/.test(css), "controls must use touch-action manipulation");
 assert(/overscroll-behavior:\s*none/.test(css), "the session screen must block pull-to-refresh overscroll");
 assert(/prefers-reduced-motion/.test(css), "reduced motion must stay honored");
-assert(/APP_VERSION/.test(js) && !/1\.4\.0/.test(js), "the version shown in the app must come from APP_VERSION, not a second literal");
+assert(/APP_VERSION/.test(js) && !/1\.4\.0/.test(js) && !/1\.5\.0/.test(js), "the version shown in the app must come from APP_VERSION, not a second literal");
 assert(/confirm\(/.test(js) && /breathe\./.test(js) && /removeItem/.test(js), "reset must confirm, then clear only this app's localStorage keys");
 assert(/breathe\.pattern/.test(js), "a saved rest id must still be accepted");
 

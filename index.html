@@ -20,7 +20,10 @@
     <div class="atmosphere" id="atmosphere" aria-hidden="true"></div>
 
     <main id="home" class="screen home">
-      <button type="button" class="info-link" id="about-open" aria-label="Information">INFORMATION</button>
+      <div class="home-tools">
+        <button type="button" class="text-btn" id="settings-open" aria-label="Settings" aria-haspopup="dialog" aria-controls="settings" aria-expanded="false">Settings</button>
+        <button type="button" class="text-btn" id="about-open" aria-label="Information">Information</button>
+      </div>
       <header class="brand">
         <h1>breathe</h1>
         <p class="whisper" id="whisper" hidden></p>
@@ -47,30 +50,40 @@
       <p class="duration-note" id="duration-note" hidden></p>
 
       <button type="button" class="start" id="start" aria-label="Start session">Start</button>
-
-      <div class="prefs">
-        <label class="pref">
-          <input type="checkbox" id="pref-timer" />
-          Always show timer
-        </label>
-        <label class="pref">
-          <input type="checkbox" id="pref-audio" />
-          Soft audio
-        </label>
-        <label class="pref">
-          <input type="checkbox" id="pref-haptics" />
-          <span id="pref-haptics-label">Haptics</span>
-        </label>
-        <label class="pref">
-          <input type="checkbox" id="pref-body-setup" checked />
-          Body setup before sessions
-        </label>
-        <label class="pref" id="pref-hum-wrap">
-          <input type="checkbox" id="pref-hum" />
-          Hum on the exhale
-        </label>
-      </div>
     </main>
+
+    <div id="settings" class="sheet is-hidden" hidden role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="sheet-backdrop" id="settings-backdrop"></div>
+      <div class="sheet-panel" id="settings-panel">
+        <div class="sheet-head">
+          <h2 id="settings-title">Settings</h2>
+          <button type="button" class="text-btn" id="settings-close" aria-label="Close settings">Close</button>
+        </div>
+        <div class="switch-list">
+          <div class="switch-row">
+            <span class="switch-label" id="pref-timer-label">Always show timer</span>
+            <button type="button" class="switch" id="pref-timer" role="switch" aria-checked="false" aria-labelledby="pref-timer-label"></button>
+          </div>
+          <div class="switch-row">
+            <span class="switch-label" id="pref-audio-label">Soft audio</span>
+            <button type="button" class="switch" id="pref-audio" role="switch" aria-checked="false" aria-labelledby="pref-audio-label"></button>
+          </div>
+          <div class="switch-row" id="pref-haptics-wrap">
+            <span class="switch-label" id="pref-haptics-label">Haptics</span>
+            <button type="button" class="switch" id="pref-haptics" role="switch" aria-checked="false" aria-labelledby="pref-haptics-label"></button>
+          </div>
+          <div class="switch-row">
+            <span class="switch-label" id="pref-body-setup-label">Body setup before sessions</span>
+            <button type="button" class="switch" id="pref-body-setup" role="switch" aria-checked="true" aria-labelledby="pref-body-setup-label"></button>
+          </div>
+          <div class="switch-row" id="pref-hum-wrap">
+            <span class="switch-label" id="pref-hum-label">Hum on the exhale</span>
+            <button type="button" class="switch" id="pref-hum" role="switch" aria-checked="false" aria-labelledby="pref-hum-label" aria-describedby="pref-hum-note"></button>
+            <p class="switch-note" id="pref-hum-note">Only for Calm Down and Sleep.</p>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <section id="about" class="screen about is-hidden" hidden aria-labelledby="about-title">
       <div class="about-inner">
@@ -80,8 +93,11 @@
           Breathe is a quiet breathing practice you run on your own device. Six cards: Calm Down, Energy, HRV, Focus, Sleep, and Think First. Nothing you do here is uploaded.
         </p>
         <h3>How to use it</h3>
-        <p>
-          Pick a card. Choose 1, 2, 5, or 10 minutes, then Start. Energy is always one minute. Think First is about three minutes and does not use that picker. That airport candy, the reply-all, the cart checkout. Breathe first, then decide. Pause, Ease, or End whenever you want. Body setup, when it is on, shows a few words before a timed session. Soft audio and haptics stay off until you turn them on. Humming is for Calm Down and Sleep.
+        <p id="about-how">
+          Pick a card. Choose 1, 2, 5, or 10 minutes, then Start. Energy is always one minute. Think First is about three minutes and does not use that picker. Pause, Ease, or End whenever you want. Body setup, when it is on, shows a few words before a timed session. Soft audio and haptics stay off until you turn them on in Settings. Humming is for Calm Down and Sleep.
+        </p>
+        <p id="about-think">
+          Think First: That airport candy, the reply-all, the cart checkout. Breathe first, then decide.
         </p>
         <h3>Safety</h3>
         <p>
