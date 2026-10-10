@@ -21,7 +21,7 @@
         colors: {
           inhale: { fill: "#7f88c8", glow: "rgba(110, 122, 190, 0.38)", atmosphere: "#090814" },
           inhale2: { fill: "#9aa3d8", glow: "rgba(140, 150, 210, 0.42)", atmosphere: "#0b0a18" },
-          exhale: { fill: "#2a315c", glow: "rgba(50, 58, 110, 0.26)", atmosphere: "#06060d" },
+          exhale: { fill: "#4e5bac", glow: "rgba(78, 91, 172, 0.32)", atmosphere: "#06060d" },
         },
       },
       energy: {
@@ -52,7 +52,7 @@
         ],
         colors: {
           inhale: { fill: "#6ef0d8", glow: "rgba(80, 220, 196, 0.5)", atmosphere: "#072422" },
-          exhale: { fill: "#0b6e66", glow: "rgba(20, 110, 100, 0.38)", atmosphere: "#041412" },
+          exhale: { fill: "#0c7a71", glow: "rgba(12, 122, 113, 0.4)", atmosphere: "#041412" },
         },
       },
       focus: {
@@ -70,7 +70,7 @@
         colors: {
           inhale: { fill: "#7ec3ff", glow: "rgba(90, 170, 255, 0.5)", atmosphere: "#0d1a30" },
           hold: { fill: "#b7a6ff", glow: "rgba(170, 150, 255, 0.46)", atmosphere: "#161430" },
-          exhale: { fill: "#1d4ed8", glow: "rgba(40, 80, 200, 0.4)", atmosphere: "#07101f" },
+          exhale: { fill: "#2758e2", glow: "rgba(39, 88, 226, 0.42)", atmosphere: "#07101f" },
         },
       },
       sleep: {
@@ -86,7 +86,7 @@
         ],
         colors: {
           inhale: { fill: "#6d739e", glow: "rgba(90, 96, 150, 0.32)", atmosphere: "#07060c" },
-          exhale: { fill: "#1f2444", glow: "rgba(40, 46, 80, 0.22)", atmosphere: "#05050a" },
+          exhale: { fill: "#646a90", glow: "rgba(100, 106, 144, 0.28)", atmosphere: "#05050a" },
         },
       },
     },
@@ -112,7 +112,7 @@
         ],
         colors: {
           inhale: { fill: "#c4a48a", glow: "rgba(180, 140, 110, 0.28)", atmosphere: "#1a1410" },
-          exhale: { fill: "#5c4638", glow: "rgba(90, 64, 48, 0.20)", atmosphere: "#0c0a08" },
+          exhale: { fill: "#7c5e4b", glow: "rgba(124, 94, 75, 0.24)", atmosphere: "#0c0a08" },
         },
       },
       lines: {

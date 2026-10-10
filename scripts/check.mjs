@@ -321,6 +321,89 @@ const midNow = now;
 clock.stop();
 assert(clock.elapsed(midNow + 50) === 0, "stop/end resets the clock");
 
+{
+  const sessionMs = 10 * 60 * 1000;
+  const driftClock = engine.createSessionClock(sessionMs);
+  let t = 40.25;
+  driftClock.start(t);
+  let expected = 0;
+  let maxDrift = 0;
+  const frameSteps = [16.67, 16.66, 8.33, 33.4, 16.7, 50.12, 16.67, 16.67, 41.2, 16.63];
+
+  function noteDrift() {
+    const actual = driftClock.elapsed(t);
+    const drift = Math.abs(actual - expected);
+    if (drift > maxDrift) {
+      maxDrift = drift;
+    }
+    const remainingDrift = Math.abs(driftClock.remaining(t) - (sessionMs - expected));
+    if (remainingDrift > maxDrift) {
+      maxDrift = remainingDrift;
+    }
+  }
+
+  function runFor(ms) {
+    let left = ms;
+    let i = 0;
+    while (left > 0 && expected < sessionMs) {
+      const step = Math.min(left, frameSteps[i % frameSteps.length], sessionMs - expected);
+      i += 1;
+      t += step;
+      expected += step;
+      noteDrift();
+      left -= step;
+    }
+  }
+
+  function pauseFor(ms) {
+    driftClock.pause(t);
+    noteDrift();
+    t += Math.min(ms, 250);
+    noteDrift();
+    t += Math.max(0, ms - 250);
+    noteDrift();
+    assert(Math.abs(driftClock.elapsed(t) - expected) < 100, "paused elapsed must stay frozen across a background jump");
+    driftClock.resume(t);
+    noteDrift();
+  }
+
+  // Phase is phaseAt(clock elapsed). A summed frame counter can sit a fraction
+  // of a millisecond on the other side of a boundary; that is not drift.
+  function assertPhaseFollowsElapsed() {
+    const elapsedNow = driftClock.elapsed(t);
+    const fromClock = engine.phaseAt(breathing.PATTERNS.focus, elapsedNow);
+    const fromExpected = engine.phaseAt(breathing.PATTERNS.focus, expected);
+    const samePhase = fromClock.phase.id === fromExpected.phase.id && fromClock.index === fromExpected.index;
+    const gap = Math.abs(elapsedNow - expected);
+    assert(
+      samePhase || gap < 1,
+      "phases must follow elapsed timestamps, not a drifting frame counter"
+    );
+  }
+
+  runFor(90 * 1000);
+  assertPhaseFollowsElapsed();
+  pauseFor(15 * 1000);
+  runFor(3 * 60 * 1000);
+  assertPhaseFollowsElapsed();
+  pauseFor(40 * 1000);
+  runFor(2 * 60 * 1000);
+  assertPhaseFollowsElapsed();
+  pauseFor(8 * 1000);
+  runFor(sessionMs - expected);
+  assertPhaseFollowsElapsed();
+  assert(maxDrift < 100, "10-minute session with pauses must drift by less than 100ms (got " + maxDrift + "ms)");
+  nearly(driftClock.elapsed(t), sessionMs, 100, "drift simulation must reach the 10-minute session end");
+  nearly(driftClock.remaining(t), 0, 100, "drift simulation remaining must be ~0 at 10 minutes");
+}
+
+assert(/end - startAt - pausedTotal/.test(engineSrc), "session elapsed must be wall timestamps minus pause gaps, not a summed frame delta");
+assert(/clock\.start\(performance\.now\(\)\)/.test(js), "the app must start the session clock from performance.now");
+assert(/const now = performance\.now\(\);\s*clock\.pause\(now\)/.test(js), "pause must stamp performance.now");
+assert(/const now = performance\.now\(\);\s*clock\.resume\(now\)/.test(js), "resume must stamp performance.now");
+assert(!/clock\.(start|pause|resume|elapsed|seek)\(\s*Date\.now/.test(js), "the session clock must not use Date.now");
+assert(!/\belapsed\s*\+=/.test(engineSrc) && !/\belapsedMs\s*\+=/.test(engineSrc), "engine must not accumulate elapsed from frame deltas");
+
 function rng(values) {
   let i = 0;
   return function () {
@@ -558,6 +641,47 @@ inkHexes.concat([sheetHex]).forEach(function (bg) {
   assert(contrastRatio(parseHex(mutedHex), parseHex(bg)) >= 4.5, "secondary text " + mutedHex + " on " + bg + " must be at least 4.5:1");
   assert(contrastRatio(parseHex(creamHex), parseHex(bg)) >= 4.5, "primary text " + creamHex + " on " + bg + " must be at least 4.5:1");
 });
+function moodInk(mood) {
+  const block = css.match(new RegExp('body\\[data-mood="' + mood + '"\\]\\s*\\{[^}]*--ink:\\s*(#[0-9a-fA-F]{6})'));
+  if (block && block[1]) {
+    return block[1];
+  }
+  return inkHexes[0];
+}
+const palettes = [];
+Object.values(breathing.PATTERNS).forEach(function (pattern) {
+  Object.keys(pattern.colors).forEach(function (phaseId) {
+    palettes.push({
+      id: pattern.id + "-" + phaseId,
+      fill: pattern.colors[phaseId].fill,
+      atmosphere: pattern.colors[phaseId].atmosphere,
+      ink: moodInk(pattern.mood),
+    });
+  });
+});
+Object.keys(breathing.URGE.pattern.colors).forEach(function (phaseId) {
+  palettes.push({
+    id: "urge-" + phaseId,
+    fill: breathing.URGE.pattern.colors[phaseId].fill,
+    atmosphere: breathing.URGE.pattern.colors[phaseId].atmosphere,
+    ink: moodInk(breathing.URGE.pattern.mood),
+  });
+});
+assert(palettes.length >= 12, "every protocol palette must be contrast-checked");
+palettes.forEach(function (entry) {
+  const fill = parseHex(entry.fill);
+  const vsAtm = contrastRatio(fill, parseHex(entry.atmosphere));
+  const vsInk = contrastRatio(fill, parseHex(entry.ink));
+  assert(
+    vsAtm >= 3,
+    "bubble " + entry.id + " fill " + entry.fill + " vs atmosphere " + entry.atmosphere + " at smallest scale must be >= 3:1 (got " + vsAtm.toFixed(2) + ")"
+  );
+  assert(
+    vsInk >= 3,
+    "bubble " + entry.id + " fill " + entry.fill + " vs background " + entry.ink + " at smallest scale must be >= 3:1 (got " + vsInk.toFixed(2) + ")"
+  );
+});
+assert(breathing.MIN_SCALE < 0.5, "smallest bubble scale is the shrunk inhale/exhale size");
 const nameFn = js.slice(js.indexOf("function cardAccessibleName"), js.indexOf("function cardSpec"));
 assert(/homeLabel/.test(nameFn) && /protocol/.test(nameFn) && /technique/.test(nameFn) && /description/.test(nameFn), "card accessible name includes name, pattern, and description");
 assert(/setAttribute\(\s*"aria-label"\s*,\s*cardAccessibleName\(/.test(js), "cards must expose that accessible name");
@@ -701,10 +825,11 @@ assert(native.healthAvailable({ median: { haptics: { trigger: function () {} }, 
   assert(moved.schedule === true && moved.key !== key, "changing the time schedules the new occurrence");
   const body = "A minute to breathe, whenever you're ready.";
   assert(native.REMINDER_BODY === body, "reminder copy must stay gentle and fixed");
-  const command = native.localReminderCommand(90, body, "Breathe", "./");
+  assert(native.REMINDER_TITLE === "Breathwork", "reminder title must match the listing name");
+  const command = native.localReminderCommand(90, body, native.REMINDER_TITLE, "./");
   assert(command.indexOf("sendlocalpushmsg://push.send?s=90=msg!") === 0, "Despia local reminder command must be on-device");
   assert(command.indexOf(encodeURIComponent(body)) !== -1, "reminder body must be URI-encoded inside the command");
-  assert(command.indexOf("&!#" + encodeURIComponent("Breathe") + "&!#" + encodeURIComponent("./")) !== -1, "reminder command must carry title and url");
+  assert(command.indexOf("&!#" + encodeURIComponent("Breathwork") + "&!#" + encodeURIComponent("./")) !== -1, "reminder command must carry title and url");
   assert(native.localReminderCommand(0.2, body, "Breathe", "./").indexOf("s=1=msg!") !== -1, "reminder delay must be at least one second");
   assert(native.parseClock("08:00").hour === 8 && native.parseClock("08:00:00").minute === 0, "clock parse accepts hour:minute and hour:minute:second");
   assert(native.parseClock("24:00") == null && native.parseClock("nope") == null, "invalid reminder times are rejected");
@@ -773,8 +898,8 @@ assert(/sw\.js/.test(js), "app must register the service worker");
 assert(/"display"\s*:\s*"standalone"/.test(manifest), "manifest should be installable (standalone)");
 assert(sw.includes("caches") && sw.includes("index.html") && sw.includes("engine.js") && sw.includes("native.js"), "service worker must cache the static app shell");
 assert(html.indexOf('src="native.js"') !== -1 && html.indexOf('src="native.js"') < html.indexOf('src="app.js"'), "native.js must load before app.js");
-assert(/const CACHE = "breathe-shell-v7"/.test(sw), "service worker cache name must bump to breathe-shell-v7");
-assert(!/breathe-shell-v1|breathe-shell-v2|breathe-shell-v3|breathe-shell-v4|breathe-shell-v5|breathe-shell-v6/.test(sw), "service worker must not keep an older cache name");
+assert(/const CACHE = "breathe-shell-v8"/.test(sw), "service worker cache name must bump to breathe-shell-v8");
+assert(!/breathe-shell-v1|breathe-shell-v2|breathe-shell-v3|breathe-shell-v4|breathe-shell-v5|breathe-shell-v6|breathe-shell-v7/.test(sw), "service worker must not keep an older cache name");
 ["privacy.html", "support.html", "icon-180.png", "icon-1024.png", "icon-maskable-512.png"].forEach(function (asset) {
   assert(sw.includes(asset), "service worker must cache " + asset);
 });
@@ -790,6 +915,10 @@ assert(/Soft audio/.test(readme) && /Haptics/.test(readme), "README must documen
 assert(/Balban/.test(readme) && /2023/.test(readme) && /cyclic sighing/i.test(readme), "README must cite Balban et al. 2023 / cyclic sighing");
 assert(/First nasal inhale \| 2/.test(readme) && /Second nasal top-up \| 1/.test(readme) && /Long mouth exhale \| 6/.test(readme), "README must document Rest seconds");
 assert(/Add to Home Screen/.test(readme) && /file:\/\//.test(readme) && /http\.server/.test(readme), "README must document PWA install vs file://");
+assert(/^# Breathwork/m.test(readme), "README title must be Breathwork");
+assert(/home wordmark stays the lowercase/.test(readme), "README must keep the breathe wordmark");
+assert(/breathe-shell-v8/.test(readme), "README must document the v8 cache");
+assert(/performance\.now/.test(readme), "README must document timestamp-based session timing");
 assert(/Manual checklist/.test(readme), "README must keep a manual checklist");
 assert(!/Quick Reset/.test(readme), "README must not document Quick Reset");
 assert(/Calm Down/.test(readme) && /Think First/.test(readme), "README must document the six-card names");
@@ -817,7 +946,10 @@ assert(/viewport-fit=cover/.test(html), "index must set viewport-fit=cover");
 assert(/name="theme-color"/.test(html), "index must set theme-color");
 assert(/apple-mobile-web-app-capable/.test(html), "index must set apple-mobile-web-app-capable");
 assert(/apple-mobile-web-app-status-bar-style/.test(html), "index must set the status bar style");
-assert(/apple-mobile-web-app-title/.test(html), "index must set the Apple web app title");
+assert(/apple-mobile-web-app-title" content="Breathwork"/.test(html), "index must set the Apple web app title to Breathwork");
+assert(/<title>Breathwork<\/title>/.test(html), "document title must be Breathwork");
+assert(/<h1>\s*breathe\s*<\/h1>/.test(html), "home wordmark stays the lowercase breathe lockup");
+assert(/Breathwork is a quiet breathing practice/.test(aboutChunk), "About must use the Breathwork name");
 assert(/apple-touch-icon/.test(html) && /icon-180\.png/.test(html), "index must link a 180px apple touch icon");
 assert(/navigator\.wakeLock/.test(js) && /request\(\s*"screen"\s*\)/.test(js), "sessions must request a screen wake lock where supported");
 assert(/function releaseWakeLock/.test(js) && /releaseWakeLock\(/.test(js), "the wake lock must be released when a session ends");
@@ -842,6 +974,9 @@ assert(/If you turn it on, completed session minutes are saved to Apple Health o
 assert(/noodleelder@gmail\.com/.test(privacy) && !/support@example\.com/.test(privacy) && !/REPLACE support@example\.com/.test(privacy), "privacy page must show noodleelder@gmail.com");
 assert(/href="\.\/"/.test(privacy) || /href="index\.html"/.test(privacy), "privacy page must link back to the app");
 assert(/viewport-fit=cover/.test(privacy) && /apple-mobile-web-app-capable/.test(privacy), "privacy page must carry the iOS viewport meta");
+assert(/apple-mobile-web-app-title" content="Breathwork"/.test(privacy), "privacy page Apple title must be Breathwork");
+assert(/Back to Breathwork/.test(privacy), "privacy page must link back using the Breathwork name");
+assert(/Breathwork does not collect data/.test(privacy), "privacy page must name Breathwork");
 assert(/silent/i.test(support) && /haptic/i.test(support) && /reset/i.test(support), "support page must cover silent mode, haptics, and reset");
 assert(/Think First/.test(support), "support page must name Think First");
 assert(storeDoc.includes(thinkFirstDescription), "APP_STORE.md listing copy must include the Think First description");
@@ -864,6 +999,8 @@ assert(/URGE\.description/.test(js), "home must show the Think First description
 assert(/saved === "urge"/.test(js), "a saved urge id must still select Think First");
 assert(/noodleelder@gmail\.com/.test(support) && !/support@example\.com/.test(support) && !/REPLACE support@example\.com/.test(support), "support page must show noodleelder@gmail.com");
 assert(/href="\.\/"/.test(support), "support page must link back to the app");
+assert(/apple-mobile-web-app-title" content="Breathwork"/.test(support), "support page Apple title must be Breathwork");
+assert(/Back to Breathwork/.test(support) && /How to use Breathwork/.test(support), "support page must use the Breathwork name");
 assert(/viewport-fit=cover/.test(support), "support page must set viewport-fit=cover");
 assert(/com\.TODO\.breathe/.test(storeDoc), "APP_STORE.md must include the bundle id placeholder");
 assert(/Data Not Collected/.test(storeDoc), "APP_STORE.md must answer App Privacy as Data Not Collected");
@@ -873,6 +1010,17 @@ assert(/6\.9/.test(storeDoc) && /6\.7/.test(storeDoc) && /6\.5/.test(storeDoc) &
 assert(/noodleelder@gmail\.com/.test(storeDoc) && !/support@example\.com/.test(storeDoc), "APP_STORE.md must list noodleelder@gmail.com");
 assert(/TODO/.test(storeDoc), "APP_STORE.md must list owner decisions as TODO");
 const pagesOrigin = "https://" + "taraannplimpton-arch.github.io/breathing-app/";
+assert(/\| App name \| Breathwork \|/.test(storeDoc), "APP_STORE.md listing name must be Breathwork");
+assert(/Practical Breathing/.test(storeDoc) && /Breathing Protocols/.test(storeDoc), "APP_STORE.md must list name fallbacks in order");
+assert(storeDoc.indexOf("Practical Breathing") < storeDoc.indexOf("Breathing Protocols"), "fallbacks must be Practical Breathing, then Breathing Protocols");
+assert(/Breathing for any moment/.test(storeDoc), "APP_STORE.md subtitle must be Breathing for any moment");
+assert(/Free\. No account\. No ads\. Nothing leaves your phone\./.test(storeDoc), "APP_STORE.md must include the promo line");
+assert(/one soft glowing circle on near-black/i.test(storeDoc) && /no letters/i.test(storeDoc), "APP_STORE.md icon direction must be one soft glowing circle, no letters");
+assert(!/\bFive Minutes\b/.test(storeDoc), "APP_STORE.md must not use Five Minutes as a name");
+assert(!/^\| App name \|.*\b(Calm|Focus|Sleep)\b/m.test(storeDoc), "APP_STORE.md name must not use calm/focus/sleep framing");
+assert(/taraannplimpton-arch/.test(storeDoc) && /exposes her name/.test(storeDoc), "APP_STORE.md must flag that the GitHub user name is in the privacy/support URLs");
+assert(/neutral name/.test(storeDoc) && /custom domain/.test(storeDoc) && /another static host/.test(storeDoc), "APP_STORE.md must list hosting options without changing hosting");
+assert(/Do not change hosting/.test(storeDoc), "APP_STORE.md must say not to change hosting in this repo");
 assert(storeDoc.includes(pagesOrigin + "privacy.html"), "APP_STORE.md must document the privacy URL");
 assert(storeDoc.includes(pagesOrigin + "support.html"), "APP_STORE.md must document the support URL");
 assert(/impactLight/.test(storeDoc) && /notificationSuccess/.test(storeDoc), "APP_STORE.md must document Median haptic styles");
@@ -884,7 +1032,7 @@ assert(/Despia/.test(storeDoc) && /category/i.test(storeDoc) && /Mindful/.test(s
 assert(/writehealthkit/.test(storeDoc), "APP_STORE.md must note the quantity health command is the wrong type");
 
 const manifestJson = JSON.parse(manifest);
-assert(manifestJson.name === "Breathe" && manifestJson.short_name === "Breathe", "manifest name and short_name must be Breathe");
+assert(manifestJson.name === "Breathwork" && manifestJson.short_name === "Breathwork", "manifest name and short_name must be Breathwork");
 assert(manifestJson.id === "/breathing-app/", "manifest id must be the GitHub Pages path");
 assert(manifestJson.start_url === "/breathing-app/" && manifestJson.scope === "/breathing-app/", "manifest start_url and scope must be /breathing-app/");
 assert(manifestJson.display === "standalone", "manifest display must be standalone");

@@ -8,7 +8,7 @@
   // never sends one. A category writer is detected only if a wrapper adds it.
 
   const REMINDER_BODY = "A minute to breathe, whenever you're ready.";
-  const REMINDER_TITLE = "Breathe";
+  const REMINDER_TITLE = "Breathwork";
 
   const KEYS = {
     reminder: "breathe.reminder",

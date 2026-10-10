@@ -278,6 +278,7 @@
         return 0;
       }
       const end = paused ? pauseAt : now;
+      // Wall timestamps minus pause gaps — never a summed frame delta.
       return Math.max(0, Math.min(duration, end - startAt - pausedTotal));
     }
 

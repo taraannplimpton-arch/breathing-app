@@ -6,7 +6,10 @@ Wrap this static app for iOS. The site is the whole product: offline shell, six 
 
 | Item | Value |
 | --- | --- |
-| App name | Breathe |
+| App name | Breathwork |
+| Name fallbacks (in order) | Practical Breathing, then Breathing Protocols |
+| Subtitle | Breathing for any moment |
+| Promotional text | Free. No account. No ads. Nothing leaves your phone. |
 | Bundle id | `com.TODO.breathe` |
 | Version | `APP_VERSION` in `protocols.js` (currently 1.5.0). Keep the wrapper version in step with it. |
 | Privacy policy URL | https://taraannplimpton-arch.github.io/breathing-app/privacy.html |
@@ -15,9 +18,25 @@ Wrap this static app for iOS. The site is the whole product: offline shell, six 
 | Category | Health & Fitness, or Lifestyle if Health invites medical review |
 | Devices | TODO: iPhone only, or iPhone and iPad |
 
+Do not put a duration, or calm / focus / sleep, in the name. The home wordmark can stay the lowercase “breathe” lockup; the listing, manifest, Apple title, and About name are Breathwork.
+
 The manifest is already scoped for GitHub Pages: `id`, `scope`, and `start_url` are `/breathing-app/`. Icon files include 192, 512, opaque 1024 (no alpha, no rounded corners), 180 for the home-screen touch icon, and a maskable 512.
 
+Icon direction: one soft glowing circle on near-black. No letters.
+
+## Privacy and support URLs (flagged)
+
+Those URLs live under the GitHub user `taraannplimpton-arch`, which exposes her name. Do not change hosting in this repo. If the listing should not show that name, pick one of:
+
+(a) a new GitHub account or org with a neutral name, then move Pages  
+(b) a custom domain on GitHub Pages  
+(c) host privacy and support on another static host
+
 ## Listing copy
+
+Subtitle: Breathing for any moment.
+
+Promotional text: Free. No account. No ads. Nothing leaves your phone.
 
 Think First — Stop, notice, then choose. That airport candy, the reply-all, the cart checkout. Breathe first, then decide. About 3 minutes. It ignores the minute picker.
 
@@ -83,7 +102,7 @@ TODO: if the binary is iPhone-only, do not upload iPad screenshots; say so in Ap
 
 - TODO: bundle id. Replace `com.TODO.breathe`.
 - TODO: Apple Developer team and who uploads the build.
-- TODO: confirm the name “Breathe” is available, or pick another display name. The manifest name is Breathe.
+- TODO: confirm the name “Breathwork” is available. Fallbacks in order: Practical Breathing, then Breathing Protocols. The manifest name is Breathwork.
 - TODO: Median (haptics only) or Despia (haptics and the on-device reminder), and the wrapper’s minimum iOS version.
 - TODO: iPhone only, or iPhone and iPad.
 - TODO: Apple Health stays off until a wrapper can write a Mindful Session category sample. Recheck App Privacy before enabling it. Reminder copy is fixed and the control stays off until the person opts in.
