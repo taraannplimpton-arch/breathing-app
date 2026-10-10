@@ -31,6 +31,8 @@ The app has no account, no analytics, no tracking, and no third-party SDK in the
 
 Privacy nutrition label: Data Not Collected. Confirm again in App Store Connect after the wrapper’s own SDKs are listed.
 
+Apple Health is not written in this version. Mindful Minutes needs a category sample, and no documented JavaScript API writes one, so the Settings switch stays hidden. If a later wrapper adds that write, confirm this nutrition label again before turning it on. The web app still does not collect Health data. The privacy page already says that if the person turns it on, completed session minutes are saved to Apple Health on the device and are not sent.
+
 ## Age rating
 
 No user accounts, no user-generated content, no unrestricted web browsing if the wrapper only loads this origin. There is no graphic content.
@@ -43,10 +45,11 @@ A thin website wrapper is a known rejection risk under guideline 4.2: Apple may 
 
 What the wrapper can add that the iPhone browser cannot:
 
-- **Native haptics.** iOS Safari and Add to Home Screen do not implement `navigator.vibrate`. The in-app haptics toggle correctly reports that it is unavailable. Median or Despia can bridge a light tap on phase change. That is a real device capability, not a new medical feature.
-- **Local notifications (reminders).** Optional, on-device reminders to practice — for example a daily time the person picks. No server, no marketing pushes. Copy should invite, not nag, and should not claim a treatment outcome.
+- **Native haptics.** iOS Safari and Add to Home Screen do not implement `navigator.vibrate`. The Haptics switch is hidden unless Median, Despia, or `navigator.vibrate` is detected. Calls do not throw when the bridge is missing. Median uses `median.haptics.trigger({ style })`; legacy `gonative` is detected the same way. Inhale is `impactLight`. Exhale is `impactLight`, or Android `tick` (the lightest Android style — there is no soft style). Holds call nothing. A completed session uses `notificationSuccess`. Despia uses `lighthaptic://` on inhale and exhale, nothing on holds, and `successhaptic://` at session end. Android web falls back to a short vibrate (12 ms inhale, 6 ms exhale, a double pulse at the end). Ending early does not play the success tap.
+- **Local notifications (reminders).** Optional, off by default. The person picks a time. Copy is fixed: “A minute to breathe, whenever you're ready.” Despia can schedule one on-device notification with `sendlocalpushmsg://push.send?s=SECONDS=msg!BODY&!#TITLE&!#URL` (values URI-encoded, delay in seconds, deep link is the page the app opened). No remote push service and no callback. It is one-shot: there is no documented cancel or repeat. The app schedules the next occurrence when it is opened or the time changes, and it does not schedule a second notification for the same occurrence. Turning the reminder off, changing the time, or Reset settings does not cancel a notification already handed to the system. It only refuses to schedule the next one. The reminder re-arms only when the app is opened. Median does not document an on-device local-notification JavaScript API. Its notification plugins are remote push services only. Use Despia for this reminder. Do not add a remote push service.
+- **Apple Health.** Not possible with the documented JavaScript APIs. The switch stays hidden. Despia's `writehealthkit://` command writes a numeric quantity. Mindful Minutes is a category sample with a start and an end, and no category write is documented. Median does not document a HealthKit JavaScript API. The adapter writes only when a category writer is actually present, and only after a completed session, not after End. Mindful Minutes needs a custom native plugin, or the wrapper confirming a category write, before the switch can show.
 
-TODO: decide whether v1 of the wrapper actually ships native haptics, local reminders, or both. If neither ships, 4.2 risk stays high. Do not promise either in the App Store description until it works.
+TODO: choose Despia if the daily reminder should ship. Haptics can ship on either wrapper. Do not promise a Median reminder or Apple Health in the store description. If those native pieces are not enough for guideline 4.2, the rejection risk stays.
 
 Other native pieces already covered by the web app: portrait standalone display, offline cache, wake lock while a session is open, pause when the app is backgrounded.
 
@@ -81,10 +84,9 @@ TODO: if the binary is iPhone-only, do not upload iPad screenshots; say so in Ap
 - TODO: bundle id. Replace `com.TODO.breathe`.
 - TODO: Apple Developer team and who uploads the build.
 - TODO: confirm the name “Breathe” is available, or pick another display name. The manifest name is Breathe.
-- TODO: Median or Despia, and the wrapper’s minimum iOS version.
+- TODO: Median (haptics only) or Despia (haptics and the on-device reminder), and the wrapper’s minimum iOS version.
 - TODO: iPhone only, or iPhone and iPad.
-- TODO: ship native haptics, local notification reminders, both, or neither (4.2 risk if neither).
-- TODO: reminder copy and default schedule, if reminders ship. Off until the person opts in.
+- TODO: Apple Health stays off until a wrapper can write a Mindful Session category sample. Recheck App Privacy before enabling it. Reminder copy is fixed and the control stays off until the person opts in.
 - TODO: age-rating questionnaire answers.
 - TODO: subtitle, description, keywords, and promotional text with no treatment or cure claims.
 - TODO: which screenshots show Think First.

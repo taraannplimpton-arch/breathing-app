@@ -8,11 +8,13 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
 const breathing = require(path.join(root, "protocols.js"));
 const engine = require(path.join(root, "engine.js"));
+const native = require(path.join(root, "native.js"));
 const html = readFileSync(path.join(root, "index.html"), "utf8");
 const protocolsSrc = readFileSync(path.join(root, "protocols.js"), "utf8");
 const css = readFileSync(path.join(root, "styles.css"), "utf8");
 const js = readFileSync(path.join(root, "app.js"), "utf8");
 const engineSrc = readFileSync(path.join(root, "engine.js"), "utf8");
+const nativeSrc = readFileSync(path.join(root, "native.js"), "utf8");
 const readme = readFileSync(path.join(root, "README.md"), "utf8");
 const sw = readFileSync(path.join(root, "sw.js"), "utf8");
 const manifest = readFileSync(path.join(root, "manifest.webmanifest"), "utf8");
@@ -607,20 +609,159 @@ assert(/dropCountAfterMs/.test(js), "Sleep must drop the on-screen count after t
 assert(/What's the smallest next move\?/.test(js) || /showNextMove/.test(js), "completion must reveal the next-move line");
 assert(!/countdownEl\.textContent = "5:00"/.test(js), "home/session countdown must not hard-code 5:00");
 assert(!/planGlimpses\(SESSION_MS\)/.test(js), "glimpse planning must not freeze the default 5:00 length");
-assert(js.includes("AudioContext") && js.includes("vibrate"), "audio and haptics paths must exist");
+assert(js.includes("AudioContext") && nativeSrc.includes("vibrate"), "audio and haptics paths must exist");
 assert(js.includes("startAudio") && js.includes("muteAudio") && js.includes("stopAudio"), "audio must start on gesture and mute on pause/end");
 
-const vibrateSupportCheck = 'typeof navigator !== "undefined" && typeof navigator.vibrate === "function"';
-assert(js.includes(vibrateSupportCheck), "app.js must detect vibrate support at load with the specified typeof check");
-const supportCheckIdx = js.indexOf(vibrateSupportCheck);
-const maybeHapticIdx = js.indexOf("function maybeHaptic");
-assert(supportCheckIdx !== -1 && (maybeHapticIdx === -1 || supportCheckIdx < maybeHapticIdx), "vibrate support must be computed once at load, not only inside maybeHaptic");
+assert(/typeof nav !== "undefined" && nav !== null && typeof nav\.vibrate === "function"/.test(nativeSrc), "native.js must detect vibrate support without assuming the bridge exists");
+assert(js.indexOf("native.hapticsAvailable(window, navigator)") !== -1 && js.indexOf("native.hapticsAvailable(window, navigator)") < js.indexOf("function maybeHaptic"), "haptic support must be decided once at load, before maybeHaptic");
 assert(/prefHapticsEl\.disabled\s*=\s*true/.test(js), "unsupported path must disable the haptics switch");
-assert(/not available on this device|not supported|iPhone not supported/i.test(js), "unsupported path must relabel haptics as unavailable");
+assert(/id="pref-haptics-wrap"[^>]*\bhidden\b/.test(html), "haptics switch must be hidden in markup until a haptic path exists");
+assert(/wrap\.hidden\s*=\s*true/.test(js), "unsupported path must hide the haptics switch");
 assert(/setSwitch\(\s*prefHapticsEl\s*,\s*false\s*\)/.test(js), "unsupported path must not leave a stored-on haptics preference looking enabled");
-assert(/if\s*\(\s*hapticsSupported\s*\)[\s\S]{0,80}navigator\.vibrate/.test(js), "navigator.vibrate must stay gated by the load-time support result");
+assert(/if\s*\(\s*hapticsSupported\s*\)[\s\S]{0,120}playHaptic\(/.test(js), "phase haptics must stay gated by the load-time support result");
 assert(/first \|\| clock\.isPaused\(\) \|\| completing \|\| !prefs\.haptics/.test(js), "supported haptic path must still skip first paint, pause, complete, and toggle-off");
-assert(/navigator\.vibrate\(\s*12\s*\)/.test(js), "supported path must still light-vibrate on phase change");
+assert(native.hapticIntent("inhale") === "light" && native.hapticIntent("inhale2") === "light", "inhale maps to a light haptic");
+assert(native.hapticIntent("exhale") === "soft", "exhale maps to a soft haptic");
+assert(native.hapticIntent("hold") === "none", "holds map to no haptic");
+assert(native.hapticIntent("end") === "success", "session end maps to a success haptic");
+assert(native.mapHaptic("inhale", "median", false).style === "impactLight", "Median inhale is impactLight");
+assert(native.mapHaptic("exhale", "median", false).style === "impactLight", "Median exhale uses impactLight when Android tick is unavailable");
+assert(native.mapHaptic("exhale", "median", true).style === "tick", "Median exhale on Android uses tick, the lightest Android style");
+assert(native.mapHaptic("inhale", "median", true).style === "impactLight", "Median inhale stays impactLight on Android");
+assert(native.mapHaptic("hold", "median", true).style == null && native.mapHaptic("hold", "median", true).intent === "none", "Median holds must not pick a style");
+assert(native.mapHaptic("end", "median", false).style === "notificationSuccess", "Median session end is notificationSuccess");
+assert(native.mapHaptic("inhale", "despia", false).command === "lighthaptic://", "Despia inhale is lighthaptic");
+assert(native.mapHaptic("exhale", "despia", false).command === "lighthaptic://", "Despia exhale uses lighthaptic because there is no softer command");
+assert(native.mapHaptic("hold", "despia", false).command == null, "Despia holds must not send a command");
+assert(native.mapHaptic("end", "despia", false).command === "successhaptic://", "Despia session end is successhaptic");
+assert(native.mapHaptic("inhale", "vibrate", false).pattern === 12, "web inhale vibrate is a short pulse");
+assert(native.mapHaptic("exhale", "vibrate", false).pattern === 6, "web exhale vibrate is softer than inhale");
+assert(native.mapHaptic("exhale", "vibrate", false).pattern < native.mapHaptic("inhale", "vibrate", false).pattern, "exhale pulse must be shorter than inhale");
+assert(native.mapHaptic("hold", "vibrate", false).pattern == null, "web holds must not vibrate");
+{
+  const endPulse = native.mapHaptic("end", "vibrate", false).pattern;
+  assert(Array.isArray(endPulse) && endPulse.length >= 3 && endPulse[1] > endPulse[0], "web session end vibrates as a short double pulse");
+}
+assert(native.hapticsAvailable({}, {}) === false, "plain browser with no vibrate must not offer haptics");
+assert(native.hapticsKind({ median: { haptics: {} }, gonative: {} }, {}) === "none", "a haptic object without trigger is not a bridge");
+assert(native.hapticsKind({ gonative: { haptics: { trigger: function () {} } } }, {}) === "median", "legacy gonative haptics count as Median");
+assert(native.reminderAvailable({}, {}) === false, "reminder stays hidden without a local-notification bridge");
+assert(native.reminderAvailable({ median: { haptics: { trigger: function () {} } } }, { userAgent: "Median" }) === false, "Median must not show the reminder");
+assert(native.healthAvailable({}) === false, "Health stays hidden without a category writer");
+assert(native.healthAvailable({ despia: function () {} }) === false, "Despia presence must not show Apple Health");
+assert(native.healthAvailable({ median: { haptics: { trigger: function () {} }, healthkit: {} } }) === false, "Median without a category writer must not show Health");
+{
+  const medianStyles = [];
+  const medianWin = {
+    median: {
+      haptics: {
+        trigger: function (arg) {
+          medianStyles.push(arg.style);
+        },
+      },
+    },
+  };
+  const iosNav = { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)" };
+  const androidNav = { userAgent: "Mozilla/5.0 (Linux; Android 14)" };
+  native.playHaptic(medianWin, iosNav, "inhale");
+  native.playHaptic(medianWin, iosNav, "exhale");
+  native.playHaptic(medianWin, iosNav, "hold");
+  native.playHaptic(medianWin, androidNav, "exhale");
+  native.playHaptic(medianWin, iosNav, "end");
+  assert(medianStyles.join(",") === "impactLight,impactLight,tick,notificationSuccess", "Median playback must skip holds and use tick only for Android exhale");
+  const commands = [];
+  native.playHaptic({ despia: function (cmd) { commands.push(cmd); } }, iosNav, "inhale");
+  native.playHaptic({ despia: function (cmd) { commands.push(cmd); } }, iosNav, "hold");
+  native.playHaptic({ despia: function (cmd) { commands.push(cmd); } }, iosNav, "end");
+  assert(commands.join(",") === "lighthaptic://,successhaptic://", "Despia playback must skip holds");
+  const pulses = [];
+  const vibrateNav = { vibrate: function (pattern) { pulses.push(pattern); } };
+  native.playHaptic({}, vibrateNav, "inhale");
+  native.playHaptic({}, vibrateNav, "hold");
+  native.playHaptic({}, vibrateNav, "exhale");
+  assert(pulses.length === 2 && pulses[0] === 12 && pulses[1] === 6, "vibrate fallback must skip holds");
+  native.playHaptic({ median: { haptics: { trigger: function () { throw new Error("missing"); } } } }, {}, "inhale");
+  native.playHaptic({}, { vibrate: function () { throw new Error("missing"); } }, "end");
+  native.playHaptic(null, null, "inhale");
+}
+{
+  const at = function (h, m, s) {
+    return new Date(2026, 9, 9, h, m, s || 0, 0).getTime();
+  };
+  assert(native.nextReminderDelaySeconds(at(7, 0), 8, 0) === 3600, "reminder delay until later today is the second gap");
+  assert(native.nextReminderDelaySeconds(at(8, 0), 8, 0) === 86400, "a reminder at the exact chosen minute waits until tomorrow");
+  assert(native.nextReminderDelaySeconds(at(8, 0, 30), 8, 0) === 86400 - 30, "a reminder just after the chosen minute waits until tomorrow");
+  assert(native.nextReminderDelaySeconds(at(9, 30), 8, 0) === 81000, "a passed reminder time rolls to the next day");
+  const key = native.reminderOccurrenceKey(at(7, 0), 8, 0);
+  const firstPlan = native.planReminder(at(7, 0), 8, 0, "");
+  assert(firstPlan.schedule === true && firstPlan.delaySeconds === 3600 && firstPlan.key === key, "the first open schedules the next occurrence");
+  const again = native.planReminder(at(7, 10), 8, 0, key);
+  assert(again.schedule === false && again.key === key, "opening again must not schedule a second notification for the same occurrence");
+  const moved = native.planReminder(at(7, 0), 9, 15, key);
+  assert(moved.schedule === true && moved.key !== key, "changing the time schedules the new occurrence");
+  const body = "A minute to breathe, whenever you're ready.";
+  assert(native.REMINDER_BODY === body, "reminder copy must stay gentle and fixed");
+  const command = native.localReminderCommand(90, body, "Breathe", "./");
+  assert(command.indexOf("sendlocalpushmsg://push.send?s=90=msg!") === 0, "Despia local reminder command must be on-device");
+  assert(command.indexOf(encodeURIComponent(body)) !== -1, "reminder body must be URI-encoded inside the command");
+  assert(command.indexOf("&!#" + encodeURIComponent("Breathe") + "&!#" + encodeURIComponent("./")) !== -1, "reminder command must carry title and url");
+  assert(native.localReminderCommand(0.2, body, "Breathe", "./").indexOf("s=1=msg!") !== -1, "reminder delay must be at least one second");
+  assert(native.parseClock("08:00").hour === 8 && native.parseClock("08:00:00").minute === 0, "clock parse accepts hour:minute and hour:minute:second");
+  assert(native.parseClock("24:00") == null && native.parseClock("nope") == null, "invalid reminder times are rejected");
+  assert(native.formatClock(8, 0) === "08:00", "reminder time is stored with a leading zero");
+  assert(native.appStartUrl({ href: "./index.html#done" }) === "./index.html", "deep link must drop the hash");
+  assert(native.appStartUrl(null) === "./", "missing location must not throw");
+}
+{
+  let saved = null;
+  const healthWin = {
+    median: {
+      healthkit: {
+        writeMindfulSession: function (sample) {
+          saved = sample;
+        },
+      },
+    },
+  };
+  assert(native.healthAvailable(healthWin) === true, "a real category writer would show Apple Health");
+  const wrote = native.writeMindfulSession(healthWin, 5 * 60 * 1000, 1000000);
+  assert(wrote.wrote === true && saved.durationMs === 300000 && saved.minutes === 5, "completed session duration is what would be written");
+  assert(saved.startMs === 700000 && saved.endMs === 1000000, "category sample must carry start and end");
+  assert(native.writeMindfulSession({}, 60000, 1000).wrote === false, "missing Health bridge must not write");
+  assert(native.writeMindfulSession(healthWin, 0, 1000).wrote === false, "a zero-length session must not write");
+  const throwing = {
+    median: {
+      healthkit: {
+        writeMindfulSession: function () {
+          throw new Error("nope");
+        },
+      },
+    },
+  };
+  assert(native.writeMindfulSession(throwing, 60000, 1000).wrote === false, "a throwing Health bridge must not escape");
+}
+assert(!/writehealthkit:\/\//.test(nativeSrc), "native.js must not send the quantity health command");
+assert(/id="pref-reminder-wrap"[^>]*\bhidden\b/.test(html) && /id="pref-health-wrap"[^>]*\bhidden\b/.test(html), "reminder and Health must be hidden in markup");
+assert(/id="pref-reminder"[^>]*role="switch"[^>]*aria-checked="false"/.test(html), "daily reminder must be an off switch");
+assert(/id="pref-health"[^>]*role="switch"[^>]*aria-checked="false"/.test(html), "Apple Health must be an off switch");
+assert(/id="pref-reminder-time"[^>]*value="08:00"/.test(html), "reminder time needs a default that is not scheduled until the switch is on");
+assert(/A minute to breathe, whenever you're ready\./.test(html), "settings must show the reminder copy");
+assert(/does not cancel a reminder already scheduled/.test(html), "settings must say an already scheduled reminder cannot be cancelled");
+assert(/prefReminderWrapEl\.hidden\s*=\s*!reminderOn/.test(js), "reminder UI must hide when no local-notification bridge is detected");
+assert(/prefHealthWrapEl\.hidden\s*=\s*!healthOn/.test(js), "Health UI must hide when no category writer is detected");
+assert(/function armReminder/.test(js) && /planReminder\(/.test(js) && /localReminderCommand\(/.test(js), "the app must schedule the next on-device reminder through the pure helper");
+assert(/if\s*\(\s*!prefs\.reminder\s*\|\|\s*!native\.reminderAvailable/.test(js), "a reminder must not be scheduled while the switch is off or the bridge is missing");
+{
+  const markFn = js.slice(js.indexOf("function markSessionComplete"), js.indexOf("function finishSession"));
+  const finishFn = js.slice(js.indexOf("function finishSession"), js.indexOf("function startLoop"));
+  const endFn = js.slice(js.indexOf("function endSession"), js.indexOf("function applyUrgeAtmosphere"));
+  const urgeDoneFn = js.slice(js.indexOf("function onUrgeBreatheDone"), js.indexOf("function startUrgeAnotherRound"));
+  assert(/playHaptic\([\s\S]*"end"/.test(markFn) && /prefs\.haptics/.test(markFn), "session end plays the success haptic only when haptics are on");
+  assert(/writeMindfulSession\(/.test(markFn) && /prefs\.health/.test(markFn), "Health write must be opt-in inside the completion helper");
+  assert(/markSessionComplete\(/.test(finishFn), "a finished timed session must record completion");
+  assert(/markSessionComplete\(/.test(urgeDoneFn), "a finished Think First breathe must record completion");
+  assert(!/markSessionComplete\(/.test(endFn), "End must not count as a completed session");
+}
 assert(/iOS Safari/i.test(readme) && /Add-to-Home-Screen/i.test(readme) && /does not implement vibrate|no vibrate|not implement vibrate/i.test(readme), "README must document that iOS Safari / Add-to-Home-Screen does not implement vibrate");
 assert(/Soft audio[\s\S]{0,80}iPhone cue|iPhone cue[\s\S]{0,80}Soft audio/i.test(readme), "README must document Soft audio as the iPhone cue");
 
@@ -630,7 +771,8 @@ assert(!guilt.test(html) && !guilt.test(js), "End must not use guilt, streak, or
 assert(/manifest\.webmanifest/.test(html), "HTML must link the web app manifest");
 assert(/sw\.js/.test(js), "app must register the service worker");
 assert(/"display"\s*:\s*"standalone"/.test(manifest), "manifest should be installable (standalone)");
-assert(sw.includes("caches") && sw.includes("index.html") && sw.includes("engine.js"), "service worker must cache the static app shell");
+assert(sw.includes("caches") && sw.includes("index.html") && sw.includes("engine.js") && sw.includes("native.js"), "service worker must cache the static app shell");
+assert(html.indexOf('src="native.js"') !== -1 && html.indexOf('src="native.js"') < html.indexOf('src="app.js"'), "native.js must load before app.js");
 assert(/const CACHE = "breathe-shell-v7"/.test(sw), "service worker cache name must bump to breathe-shell-v7");
 assert(!/breathe-shell-v1|breathe-shell-v2|breathe-shell-v3|breathe-shell-v4|breathe-shell-v5|breathe-shell-v6/.test(sw), "service worker must not keep an older cache name");
 ["privacy.html", "support.html", "icon-180.png", "icon-1024.png", "icon-maskable-512.png"].forEach(function (asset) {
@@ -696,6 +838,7 @@ const storeDoc = readFileSync(path.join(root, "APP_STORE.md"), "utf8");
 assert(/no account/i.test(privacy) && /analytics/i.test(privacy) && /tracking/i.test(privacy), "privacy policy must say there is no account, analytics, or tracking");
 assert(/localStorage/.test(privacy) && /third part/i.test(privacy), "privacy policy must say preferences stay in localStorage and there are no third parties");
 assert(/October 9, 2026/.test(privacy), "privacy policy effective date must be October 9, 2026");
+assert(/If you turn it on, completed session minutes are saved to Apple Health on your device; the app never sees or sends your Health data\./.test(privacy), "privacy policy must describe the optional on-device Health write");
 assert(/noodleelder@gmail\.com/.test(privacy) && !/support@example\.com/.test(privacy) && !/REPLACE support@example\.com/.test(privacy), "privacy page must show noodleelder@gmail.com");
 assert(/href="\.\/"/.test(privacy) || /href="index\.html"/.test(privacy), "privacy page must link back to the app");
 assert(/viewport-fit=cover/.test(privacy) && /apple-mobile-web-app-capable/.test(privacy), "privacy page must carry the iOS viewport meta");
@@ -710,6 +853,7 @@ assert(!/alcohol/i.test(storeDoc), "APP_STORE.md must not mention alcohol");
     ["index.html", html],
     ["app.js", js],
     ["protocols.js", protocolsSrc],
+    ["native.js", nativeSrc],
     ["support.html", support],
     ["privacy.html", privacy],
   ].forEach(function (pair) {
@@ -731,6 +875,13 @@ assert(/TODO/.test(storeDoc), "APP_STORE.md must list owner decisions as TODO");
 const pagesOrigin = "https://" + "taraannplimpton-arch.github.io/breathing-app/";
 assert(storeDoc.includes(pagesOrigin + "privacy.html"), "APP_STORE.md must document the privacy URL");
 assert(storeDoc.includes(pagesOrigin + "support.html"), "APP_STORE.md must document the support URL");
+assert(/impactLight/.test(storeDoc) && /notificationSuccess/.test(storeDoc), "APP_STORE.md must document Median haptic styles");
+assert(/lighthaptic/.test(storeDoc) && /successhaptic/.test(storeDoc), "APP_STORE.md must document Despia haptic commands");
+assert(/sendlocalpushmsg/.test(storeDoc), "APP_STORE.md must document the on-device reminder command");
+assert(/does not cancel|cannot cancel|no documented cancel/i.test(storeDoc), "APP_STORE.md must say a scheduled reminder cannot be cancelled");
+assert(/Median does not document an on-device local-notification/.test(storeDoc), "APP_STORE.md must say Median has no local-notification API");
+assert(/Despia/.test(storeDoc) && /category/i.test(storeDoc) && /Mindful/.test(storeDoc), "APP_STORE.md must say Mindful Minutes needs a category write");
+assert(/writehealthkit/.test(storeDoc), "APP_STORE.md must note the quantity health command is the wrong type");
 
 const manifestJson = JSON.parse(manifest);
 assert(manifestJson.name === "Breathe" && manifestJson.short_name === "Breathe", "manifest name and short_name must be Breathe");
@@ -870,7 +1021,12 @@ walkFiles(root, repoFiles);
 repoFiles.forEach(function (filePath) {
   const text = readFileSync(filePath);
   const asString = text.toString("utf8");
-  assert(!asString.includes(bannedEmail), path.relative(root, filePath) + " must not contain a personal email");
+  const rel = path.relative(root, filePath);
+  assert(!asString.includes(bannedEmail), rel + " must not contain a personal email");
+  if (rel !== "scripts/check.mjs" && /\.(js|mjs|html|css|md|webmanifest|svg)$/.test(rel)) {
+    assert(!/onesignal/i.test(asString), rel + " must not mention a remote push vendor");
+    assert(!/firebase/i.test(asString), rel + " must not mention a remote push vendor");
+  }
   const urls = asString.match(/https?:\/\/[^\s"'<>)\\]+/g) || [];
   urls.forEach(function (url) {
     const clean = url.replace(/[.,)|*`]+$/, "");

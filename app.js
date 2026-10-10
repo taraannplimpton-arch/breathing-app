@@ -26,6 +26,7 @@
     HUM_INHALE_HZ,
     HUM_EXHALE_HZ,
   } = engine;
+  const native = window.BREATHING_NATIVE;
 
   const PATTERN_ORDER = ["rest", "energy", "hrv", "focus", "sleep", "urge"];
   const PREROLL_CUES = ["Feet", "Stack", "Hands", "Jaw", "Eyes", "Exhale"];
@@ -70,12 +71,15 @@
   const prefTimerEl = document.getElementById("pref-timer");
   const prefAudioEl = document.getElementById("pref-audio");
   const prefHapticsEl = document.getElementById("pref-haptics");
-  const prefHapticsLabelEl = document.getElementById("pref-haptics-label");
   const prefBodySetupEl = document.getElementById("pref-body-setup");
   const prefHumEl = document.getElementById("pref-hum");
   const prefHumWrapEl = document.getElementById("pref-hum-wrap");
-  const hapticsSupported =
-    typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
+  const prefReminderWrapEl = document.getElementById("pref-reminder-wrap");
+  const prefReminderEl = document.getElementById("pref-reminder");
+  const prefReminderTimeEl = document.getElementById("pref-reminder-time");
+  const prefHealthWrapEl = document.getElementById("pref-health-wrap");
+  const prefHealthEl = document.getElementById("pref-health");
+  const hapticsSupported = native.hapticsAvailable(window, navigator);
 
   let clock = createSessionClock(SESSION_MS);
   const prefs = {
@@ -84,6 +88,9 @@
     haptics: false,
     bodySetup: true,
     hum: false,
+    reminder: false,
+    reminderTime: "08:00",
+    health: false,
   };
 
   let selectedId = "rest";
@@ -265,26 +272,93 @@
     }
   }
 
-  function applyHapticsAvailability() {
-    if (!prefHapticsEl) {
-      return;
+  function readReminderTime() {
+    try {
+      const parsed = native.parseClock(window.localStorage.getItem(native.KEYS.reminderTime));
+      if (parsed) {
+        return native.formatClock(parsed.hour, parsed.minute);
+      }
+    } catch (err) {
+      /* private mode */
     }
-    const wrap = prefHapticsEl.closest(".switch-row");
+    return "08:00";
+  }
+
+  function applyHapticsAvailability() {
+    const wrap = document.getElementById("pref-haptics-wrap");
     if (hapticsSupported) {
-      prefHapticsEl.disabled = false;
+      if (prefHapticsEl) {
+        prefHapticsEl.disabled = false;
+      }
       if (wrap) {
-        wrap.classList.remove("is-unavailable");
+        wrap.hidden = false;
       }
       return;
     }
     prefs.haptics = false;
     setSwitch(prefHapticsEl, false);
-    prefHapticsEl.disabled = true;
-    if (wrap) {
-      wrap.classList.add("is-unavailable");
+    if (prefHapticsEl) {
+      prefHapticsEl.disabled = true;
     }
-    if (prefHapticsLabelEl) {
-      prefHapticsLabelEl.textContent = "Haptics (not available on this device)";
+    if (wrap) {
+      wrap.hidden = true;
+    }
+  }
+
+  function applyNativeGates() {
+    applyHapticsAvailability();
+    const reminderOn = Boolean(native.reminderAvailable(window, navigator));
+    const healthOn = Boolean(native.healthAvailable(window));
+    if (prefReminderWrapEl) {
+      prefReminderWrapEl.hidden = !reminderOn;
+    }
+    if (!reminderOn) {
+      prefs.reminder = false;
+      setSwitch(prefReminderEl, false);
+    }
+    if (prefHealthWrapEl) {
+      prefHealthWrapEl.hidden = !healthOn;
+    }
+    if (!healthOn) {
+      prefs.health = false;
+      setSwitch(prefHealthEl, false);
+    }
+  }
+
+  function armReminder() {
+    if (!prefs.reminder || !native.reminderAvailable(window, navigator)) {
+      return;
+    }
+    const parsed = native.parseClock(prefs.reminderTime) || { hour: 8, minute: 0 };
+    let armedKey = "";
+    try {
+      armedKey = window.localStorage.getItem(native.KEYS.reminderArmedFor) || "";
+    } catch (err) {
+      armedKey = "";
+    }
+    const plan = native.planReminder(Date.now(), parsed.hour, parsed.minute, armedKey);
+    if (!plan.schedule) {
+      return;
+    }
+    let sent = false;
+    try {
+      const command = native.localReminderCommand(
+        plan.delaySeconds,
+        native.REMINDER_BODY,
+        native.REMINDER_TITLE,
+        native.appStartUrl(window.location)
+      );
+      sent = native.sendDespia(window, navigator, command);
+    } catch (err) {
+      sent = false;
+    }
+    if (!sent) {
+      return;
+    }
+    try {
+      window.localStorage.setItem(native.KEYS.reminderArmedFor, plan.key);
+    } catch (err) {
+      /* private mode */
     }
   }
 
@@ -294,13 +368,22 @@
     prefs.haptics = readPref(PREF_KEYS.haptics);
     prefs.bodySetup = readPref(PREF_KEYS.bodySetup, true);
     prefs.hum = readPref(PREF_KEYS.hum);
+    prefs.reminder = readPref(native.KEYS.reminder);
+    prefs.reminderTime = readReminderTime();
+    prefs.health = readPref(native.KEYS.health);
     selectedMinutes = readDurationMinutes();
     setSwitch(prefTimerEl, prefs.alwaysTimer);
     setSwitch(prefAudioEl, prefs.audio);
     setSwitch(prefHapticsEl, prefs.haptics);
     setSwitch(prefBodySetupEl, prefs.bodySetup);
     setSwitch(prefHumEl, prefs.hum);
-    applyHapticsAvailability();
+    setSwitch(prefReminderEl, prefs.reminder);
+    setSwitch(prefHealthEl, prefs.health);
+    if (prefReminderTimeEl) {
+      prefReminderTimeEl.value = prefs.reminderTime;
+    }
+    applyNativeGates();
+    armReminder();
     syncDurationUi();
     syncHumPrefUi();
   }
@@ -623,7 +706,7 @@
       return;
     }
     if (hapticsSupported) {
-      navigator.vibrate(12);
+      native.playHaptic(window, navigator, snapshot.phase.id);
     }
   }
 
@@ -816,11 +899,29 @@
     hideNextMove();
   }
 
+  function markSessionComplete(durationMs) {
+    if (prefs.haptics && hapticsSupported) {
+      try {
+        native.playHaptic(window, navigator, "end");
+      } catch (err) {
+        /* bridge missing or threw */
+      }
+    }
+    if (prefs.health && native.healthAvailable(window)) {
+      try {
+        native.writeMindfulSession(window, durationMs);
+      } catch (err) {
+        /* bridge missing or threw */
+      }
+    }
+  }
+
   function finishSession() {
     if (completing) {
       return;
     }
     completing = true;
+    markSessionComplete(clock.sessionMs);
     clock.complete();
     cancelFrame();
     muteAudio();
@@ -1221,6 +1322,7 @@
     if (urgePhase !== "breathe") {
       return;
     }
+    markSessionComplete(clock.sessionMs);
     const destination = urgeAfterBreathe === "respond" ? "respond" : "expand";
     urgePhase = destination;
     cancelFrame();
@@ -1469,6 +1571,9 @@
     prefs.haptics = false;
     prefs.bodySetup = true;
     prefs.hum = false;
+    prefs.reminder = false;
+    prefs.reminderTime = "08:00";
+    prefs.health = false;
     loadPrefs();
     renderHome();
   }
@@ -1599,6 +1704,45 @@
     writePref(PREF_KEYS.hum, prefs.hum);
     previewHomeAtmosphere();
   });
+  bindSwitch(prefReminderEl, function (on) {
+    if (!native.reminderAvailable(window, navigator)) {
+      setSwitch(prefReminderEl, false);
+      prefs.reminder = false;
+      return;
+    }
+    prefs.reminder = on;
+    writePref(native.KEYS.reminder, prefs.reminder);
+    if (on) {
+      armReminder();
+    }
+  });
+  bindSwitch(prefHealthEl, function (on) {
+    if (!native.healthAvailable(window)) {
+      setSwitch(prefHealthEl, false);
+      prefs.health = false;
+      return;
+    }
+    prefs.health = on;
+    writePref(native.KEYS.health, prefs.health);
+  });
+  if (prefReminderTimeEl) {
+    prefReminderTimeEl.addEventListener("change", function () {
+      const parsed = native.parseClock(prefReminderTimeEl.value);
+      if (!parsed) {
+        prefReminderTimeEl.value = prefs.reminderTime;
+        return;
+      }
+      prefs.reminderTime = native.formatClock(parsed.hour, parsed.minute);
+      try {
+        window.localStorage.setItem(native.KEYS.reminderTime, prefs.reminderTime);
+      } catch (err) {
+        /* private mode */
+      }
+      if (prefs.reminder) {
+        armReminder();
+      }
+    });
+  }
 
   document.addEventListener("keydown", function (event) {
     const key = event.key;

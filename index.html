@@ -68,7 +68,7 @@
             <span class="switch-label" id="pref-audio-label">Soft audio</span>
             <button type="button" class="switch" id="pref-audio" role="switch" aria-checked="false" aria-labelledby="pref-audio-label"></button>
           </div>
-          <div class="switch-row" id="pref-haptics-wrap">
+          <div class="switch-row" id="pref-haptics-wrap" hidden>
             <span class="switch-label" id="pref-haptics-label">Haptics</span>
             <button type="button" class="switch" id="pref-haptics" role="switch" aria-checked="false" aria-labelledby="pref-haptics-label"></button>
           </div>
@@ -80,6 +80,22 @@
             <span class="switch-label" id="pref-hum-label">Hum on the exhale</span>
             <button type="button" class="switch" id="pref-hum" role="switch" aria-checked="false" aria-labelledby="pref-hum-label" aria-describedby="pref-hum-note"></button>
             <p class="switch-note" id="pref-hum-note">Only for Calm Down and Sleep.</p>
+          </div>
+          <div class="bridge-block" id="pref-reminder-wrap" hidden>
+            <div class="switch-row" id="pref-reminder-row">
+              <span class="switch-label" id="pref-reminder-label">Daily reminder</span>
+              <button type="button" class="switch" id="pref-reminder" role="switch" aria-checked="false" aria-labelledby="pref-reminder-label" aria-describedby="pref-reminder-note"></button>
+              <p class="switch-note" id="pref-reminder-note">A minute to breathe, whenever you're ready. The next one is scheduled when you open the app. Turning this off, or changing the time, does not cancel a reminder already scheduled.</p>
+            </div>
+            <div class="switch-row" id="pref-reminder-time-row">
+              <label class="switch-label" id="pref-reminder-time-label" for="pref-reminder-time">Reminder time</label>
+              <input class="time-input" type="time" id="pref-reminder-time" value="08:00" aria-labelledby="pref-reminder-time-label">
+            </div>
+          </div>
+          <div class="switch-row" id="pref-health-wrap" hidden>
+            <span class="switch-label" id="pref-health-label">Apple Health</span>
+            <button type="button" class="switch" id="pref-health" role="switch" aria-checked="false" aria-labelledby="pref-health-label" aria-describedby="pref-health-note"></button>
+            <p class="switch-note" id="pref-health-note">Save completed sessions as mindful minutes, on this device.</p>
           </div>
         </div>
       </div>
@@ -151,6 +167,7 @@
 
     <script src="protocols.js"></script>
     <script src="engine.js"></script>
+    <script src="native.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

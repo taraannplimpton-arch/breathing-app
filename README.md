@@ -61,7 +61,7 @@ Keyboard:
 
 ## Settings
 
-Timer, audio, and haptics default off (the timer is hidden most of the time unless you opt in). Body setup defaults on. Humming defaults off. Session length defaults to 5 minutes. The five preferences are switches in Settings and persist in `localStorage`:
+Timer, audio, and haptics default off (the timer is hidden most of the time unless you opt in). Body setup defaults on. Humming defaults off. Session length defaults to 5 minutes. The daily reminder and Apple Health stay hidden unless the wrapper can actually do them, and both default off. Preferences are switches in Settings and persist in `localStorage`:
 
 | Control | Key | Default |
 | --- | --- | --- |
@@ -71,6 +71,8 @@ Timer, audio, and haptics default off (the timer is hidden most of the time unle
 | Haptics | `breathe.haptics` | off |
 | Body setup before sessions | `breathe.bodySetup` | on |
 | Hum on the exhale | `breathe.hum` | off — Calm Down and Sleep only |
+| Daily reminder | `breathe.reminder` | off — hidden without an on-device notification bridge. Time is `breathe.reminderTime` (default 08:00). |
+| Apple Health | `breathe.health` | off — hidden. No documented Mindful Minutes write. |
 
 **Always show timer** keeps the remaining-time counter visible for the whole session (accessibility). Otherwise the counter appears only about four or five times (fewer on 1- and 2-minute sessions): near the start, near the end, and a couple of brief mid-session fades. It fades in and out; it never flashes. The bubble is the continuous cue. On Sleep, counts fade after about four cycles (“drop the count”) unless Always show timer is on.
 
@@ -78,7 +80,11 @@ Timer, audio, and haptics default off (the timer is hidden most of the time unle
 
 **Hum on the exhale** (Calm Down and Sleep) adds “Hum softly on the exhale.” to the home technique line. If Soft audio is also on, the exhale uses a gentler low hum-like tone. No extra words during the session.
 
-**Haptics** is a light `navigator.vibrate` on phase change when the browser supports it (typical Android Chrome). iOS Safari / Add-to-Home-Screen does not implement vibrate, so the toggle is disabled and labeled unavailable on iPhone; **Soft audio** is the iPhone cue. No vibration if the toggle is off.
+**Haptics** is a light tap on the inhale, a softer tap on the exhale, nothing on a hold, and a short success tap when the session finishes. Android Chrome uses `navigator.vibrate`. A Median or Despia wrapper uses its native bridge instead. iOS Safari / Add-to-Home-Screen does not implement vibrate, so the Haptics switch is hidden there; **Soft audio** is the iPhone cue. No tap if the toggle is off. Ending early does not play the success tap.
+
+**Daily reminder** is off, and the row is hidden unless Despia’s on-device notification command is available. Median does not document that API. Copy: “A minute to breathe, whenever you're ready.” Opening the app schedules the next occurrence of the chosen time. Turning it off cannot cancel one already scheduled.
+
+**Apple Health** is off and hidden. Completed minutes would be written only after a finished session, and only if a wrapper can save a Mindful Session category sample. None documented today can.
 
 Home also shows one short technique line for the selected pattern (never during the session). Calm Down is nose inhale, short nose top-up, long mouth exhale — not nose-only. Energy and HRV stay nose in and nose out. Focus (box) is nose for inhale, hold, exhale, and hold. Sleep is a small nasal inhale and an easy longer exhale (nose or soft pursed lips). Think First’s technique line is “Stop, notice, then choose.” Its description is “That airport candy, the reply-all, the cart checkout. Breathe first, then decide.” The longer doctor note lives on About.
 
@@ -196,7 +202,7 @@ Manual checklist:
 8. Sleep: 4s grow, 6s shrink, dim like Calm Down. After about four cycles the countdown stays off (unless Always show timer).
 9. Keys `1` through `6` select the six cards. Think First disables the minute picker and shows *About 3 minutes.* Start skips body setup.
 10. Let any timed pattern reach `0:00`. Quiet fade and the next-move line; tap or press a key to return home.
-11. Open Settings and turn on Always show timer, Soft audio, Haptics, and Hum; reload — they stay. Body setup stays on unless turned off. Hum is only for Calm Down and Sleep. Audio starts with Start, mutes on Pause/End. Hum changes Calm Down/Sleep technique copy and the exhale tone. With reduced-motion enabled in the OS, the bubble should not pulse in size.
+11. Open Settings and turn on Always show timer, Soft audio, and Hum; turn on Haptics if that switch is shown; reload — they stay. Daily reminder and Apple Health stay hidden in a normal browser. Body setup stays on unless turned off. Hum is only for Calm Down and Sleep. Audio starts with Start, mutes on Pause/End. Hum changes Calm Down/Sleep technique copy and the exhale tone. With reduced-motion enabled in the OS, the bubble should not pulse in size.
 12. About shows what the app is, how to use it, the safety note, the version, links to privacy and support, and Reset settings (confirm, then only this app’s keys are cleared).
 13. Served over HTTP, `/`, `/privacy.html`, and `/support.html` load. The document links a manifest and registers a service worker. Add to Home Screen is available in a supporting browser.
 14. Think First: no pre-roll and no duration change. Stop, then Observe (tap skips), then a dusk-clay bubble, 4s grow / 6s shrink, breath numbers 1–10 wrapping, faint wave. Expand, then *What's your next move?* Another round returns to the bubble, then Respond. Done returns home. End during the breathing returns home. Reduced motion keeps the wave still.

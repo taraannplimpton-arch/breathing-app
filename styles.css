@@ -418,6 +418,11 @@ body[data-mood="still"] .atmosphere {
   border-top: 0;
 }
 
+.switch-row[hidden],
+.bridge-block[hidden] {
+  display: none;
+}
+
 .switch-label {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 1rem;
@@ -436,6 +441,26 @@ body[data-mood="still"] .atmosphere {
   letter-spacing: 0;
   text-transform: none;
   color: var(--muted);
+}
+
+.time-input {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--cream);
+  background: transparent;
+  border: 1px solid rgba(236, 231, 220, 0.38);
+  border-radius: 0.75rem;
+  min-height: 2.75rem;
+  min-width: 7.5rem;
+  padding: 0 0.65rem;
+  color-scheme: dark;
+}
+
+.time-input:focus-visible {
+  outline: 2px solid var(--cream);
+  outline-offset: 3px;
 }
 
 .switch {
