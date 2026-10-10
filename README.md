@@ -65,7 +65,9 @@ Keyboard:
 
 ## Settings
 
-Timer, audio, and haptics default off (the timer is hidden most of the time unless you opt in). Body setup defaults on. Humming defaults off. Session length defaults to 5 minutes. The daily reminder and Apple Health stay hidden unless the wrapper can actually do them, and both default off. Preferences are switches in Settings and persist in `localStorage`:
+Timer, audio, and haptics default off (the timer is hidden most of the time unless you opt in). Body setup defaults on. Humming defaults off. Session length defaults to 5 minutes. The daily reminder and Apple Health stay hidden unless the wrapper can actually do them, and both default off. Preferences are switches in Settings and persist in `localStorage`.
+
+Each of the six cards keeps its own session length and its own Always show timer, Soft audio, Haptics, Body setup, and Hum switches. Those six records live together under `breathe.cards`. The first time this version runs, the saved values of the keys below are copied onto every card. After that, changing a control saves only the card that is selected. Energy stays one minute and Think First stays about three minutes, so their duration controls stay disabled; their switches are still stored per card. Hum still only changes Calm Down and Sleep. Reset settings deletes `breathe.cards` and every other `breathe.*` key, then restores these defaults.
 
 | Control | Key | Default |
 | --- | --- | --- |

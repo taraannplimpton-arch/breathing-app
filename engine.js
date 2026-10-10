@@ -434,6 +434,199 @@
     });
   }
 
+  const CARDS_KEY = "breathe.cards";
+  const CARD_PREF_IDS = Object.freeze(["rest", "energy", "hrv", "focus", "sleep", "urge"]);
+  const CARD_DURATIONS = BREATHING.DURATION_MINUTES || [1, 2, 5, 10];
+
+  function humAllowed(cardId) {
+    return cardId === "rest" || cardId === "sleep";
+  }
+
+  function cardPrefDefaults() {
+    return {
+      alwaysTimer: false,
+      audio: false,
+      haptics: false,
+      bodySetup: true,
+      hum: false,
+      duration: 5,
+    };
+  }
+
+  function storageSnapshot(store) {
+    const snapshot = {};
+    if (!store || typeof store !== "object") {
+      return snapshot;
+    }
+    Object.keys(store).forEach(function (key) {
+      if (store[key] !== undefined) {
+        snapshot[key] = store[key];
+      }
+    });
+    return snapshot;
+  }
+
+  function asBool(value, fallback) {
+    if (value === true || value === false) {
+      return value;
+    }
+    if (value === 1 || value === "1" || value === "true") {
+      return true;
+    }
+    if (value === 0 || value === "0" || value === "false") {
+      return false;
+    }
+    return fallback;
+  }
+
+  function asDuration(value, fallback) {
+    const minutes = Number(value);
+    if (CARD_DURATIONS.indexOf(minutes) !== -1) {
+      return minutes;
+    }
+    const base = Number(fallback);
+    if (CARD_DURATIONS.indexOf(base) !== -1) {
+      return base;
+    }
+    return 5;
+  }
+
+  function normalizeCardPref(input, fallback) {
+    const base = fallback || cardPrefDefaults();
+    const src = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const durationGiven =
+      Object.prototype.hasOwnProperty.call(src, "duration") && src.duration != null && src.duration !== "";
+    return {
+      alwaysTimer: asBool(src.alwaysTimer, base.alwaysTimer),
+      audio: asBool(src.audio, base.audio),
+      haptics: asBool(src.haptics, base.haptics),
+      bodySetup: asBool(src.bodySetup, base.bodySetup),
+      hum: asBool(src.hum, base.hum),
+      duration: durationGiven ? asDuration(src.duration, base.duration) : asDuration(base.duration, 5),
+    };
+  }
+
+  function legacyCardDefaults(snapshot) {
+    const defaults = cardPrefDefaults();
+    if (Object.prototype.hasOwnProperty.call(snapshot, PREF_KEYS.alwaysTimer)) {
+      defaults.alwaysTimer = asBool(snapshot[PREF_KEYS.alwaysTimer], defaults.alwaysTimer);
+    }
+    if (Object.prototype.hasOwnProperty.call(snapshot, PREF_KEYS.audio)) {
+      defaults.audio = asBool(snapshot[PREF_KEYS.audio], defaults.audio);
+    }
+    if (Object.prototype.hasOwnProperty.call(snapshot, PREF_KEYS.haptics)) {
+      defaults.haptics = asBool(snapshot[PREF_KEYS.haptics], defaults.haptics);
+    }
+    if (Object.prototype.hasOwnProperty.call(snapshot, PREF_KEYS.bodySetup)) {
+      defaults.bodySetup = asBool(snapshot[PREF_KEYS.bodySetup], defaults.bodySetup);
+    }
+    if (Object.prototype.hasOwnProperty.call(snapshot, PREF_KEYS.hum)) {
+      defaults.hum = asBool(snapshot[PREF_KEYS.hum], defaults.hum);
+    }
+    if (Object.prototype.hasOwnProperty.call(snapshot, PREF_KEYS.duration)) {
+      defaults.duration = asDuration(snapshot[PREF_KEYS.duration], defaults.duration);
+    }
+    return defaults;
+  }
+
+  function cardsFromDefaults(defaults) {
+    const base = normalizeCardPref(defaults, cardPrefDefaults());
+    const cards = {};
+    CARD_PREF_IDS.forEach(function (id) {
+      cards[id] = normalizeCardPref(base, cardPrefDefaults());
+    });
+    return cards;
+  }
+
+  function parseCardBlob(raw) {
+    if (raw == null) {
+      return null;
+    }
+    if (typeof raw === "string" && raw.trim() === "") {
+      return null;
+    }
+    try {
+      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return null;
+      }
+      return parsed;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function loadCardPrefs(store) {
+    const snapshot = storageSnapshot(store);
+    const defaults = legacyCardDefaults(snapshot);
+    const parsed = parseCardBlob(snapshot[CARDS_KEY]);
+    const cards = cardsFromDefaults(defaults);
+    if (!parsed) {
+      return { cards: cards, migrated: true, defaults: normalizeCardPref(defaults) };
+    }
+    CARD_PREF_IDS.forEach(function (id) {
+      const record = parsed[id];
+      if (record && typeof record === "object" && !Array.isArray(record)) {
+        cards[id] = normalizeCardPref(record, defaults);
+      }
+    });
+    return { cards: cards, migrated: false, defaults: normalizeCardPref(defaults) };
+  }
+
+  function cardPref(cards, id) {
+    const record = cards && cards[id];
+    if (!record || typeof record !== "object") {
+      return cardPrefDefaults();
+    }
+    return normalizeCardPref(record, cardPrefDefaults());
+  }
+
+  function updateCardPrefs(cards, id, patch) {
+    const next = {};
+    CARD_PREF_IDS.forEach(function (cardId) {
+      next[cardId] = normalizeCardPref(cards && cards[cardId], cardPrefDefaults());
+    });
+    if (CARD_PREF_IDS.indexOf(id) === -1) {
+      return next;
+    }
+    const current = next[id];
+    const merged = {
+      alwaysTimer: current.alwaysTimer,
+      audio: current.audio,
+      haptics: current.haptics,
+      bodySetup: current.bodySetup,
+      hum: current.hum,
+      duration: current.duration,
+    };
+    const src = patch && typeof patch === "object" ? patch : {};
+    Object.keys(merged).forEach(function (key) {
+      if (Object.prototype.hasOwnProperty.call(src, key) && src[key] !== undefined) {
+        merged[key] = src[key];
+      }
+    });
+    next[id] = normalizeCardPref(merged, current);
+    return next;
+  }
+
+  function serializeCardPrefs(cards) {
+    const normalized = {};
+    CARD_PREF_IDS.forEach(function (id) {
+      normalized[id] = normalizeCardPref(cards && cards[id], cardPrefDefaults());
+    });
+    return JSON.stringify(normalized);
+  }
+
+  function resetCardPrefs(store) {
+    const snapshot = storageSnapshot(store);
+    const removedKeys = Object.keys(snapshot).filter(function (key) {
+      return key.indexOf("breathe.") === 0;
+    });
+    return {
+      removedKeys: removedKeys,
+      cards: cardsFromDefaults(cardPrefDefaults()),
+    };
+  }
+
   const engine = {
     SESSION_MS: SESSION_MS,
     MIN_SCALE: MIN_SCALE,
@@ -441,6 +634,14 @@
     FORESHADOW_MS: FORESHADOW_MS,
     RESTING_SCALE: RESTING_SCALE,
     PREF_KEYS: PREF_KEYS,
+    CARDS_KEY: CARDS_KEY,
+    CARD_PREF_IDS: CARD_PREF_IDS,
+    humAllowed: humAllowed,
+    loadCardPrefs: loadCardPrefs,
+    cardPref: cardPref,
+    updateCardPrefs: updateCardPrefs,
+    serializeCardPrefs: serializeCardPrefs,
+    resetCardPrefs: resetCardPrefs,
     HUM_INHALE_HZ: HUM_INHALE_HZ,
     HUM_EXHALE_HZ: HUM_EXHALE_HZ,
     cycleMs: cycleMs,

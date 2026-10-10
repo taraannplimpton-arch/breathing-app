@@ -14,7 +14,6 @@
     createSessionClock,
     planGlimpses,
     isCountdownVisible,
-    PREF_KEYS,
     cycleMs,
     effectiveMinutes,
     easePhases,
@@ -25,6 +24,13 @@
     isExhalePhase,
     HUM_INHALE_HZ,
     HUM_EXHALE_HZ,
+    CARDS_KEY,
+    loadCardPrefs,
+    updateCardPrefs,
+    serializeCardPrefs,
+    resetCardPrefs,
+    cardPref,
+    humAllowed,
   } = engine;
   const native = window.BREATHING_NATIVE;
 
@@ -95,6 +101,7 @@
 
   let selectedId = "rest";
   let selectedMinutes = 5;
+  let cardPrefs = loadCardPrefs({}).cards;
   let sessionKind = "normal";
   let rafId = 0;
   let completing = false;
@@ -190,25 +197,77 @@
     return effectiveMinutes(currentPattern(), selectedMinutes);
   }
 
-  function readDurationMinutes() {
+  function readBreatheStorage() {
+    const snapshot = {};
     try {
-      const raw = window.localStorage.getItem(PREF_KEYS.duration);
-      const minutes = Number(raw);
-      if (ALLOWED_MINUTES.indexOf(minutes) !== -1) {
-        return minutes;
+      for (let i = 0; i < window.localStorage.length; i += 1) {
+        const key = window.localStorage.key(i);
+        if (key && key.indexOf("breathe.") === 0) {
+          snapshot[key] = window.localStorage.getItem(key);
+        }
       }
     } catch (err) {
       /* private mode */
     }
-    return 5;
+    return snapshot;
   }
 
-  function writeDurationMinutes(minutes) {
+  function writeCards(cards) {
     try {
-      window.localStorage.setItem(PREF_KEYS.duration, String(minutes));
+      window.localStorage.setItem(CARDS_KEY, serializeCardPrefs(cards));
     } catch (err) {
       /* private mode */
     }
+  }
+
+  function applyCardToSession() {
+    const card = cardPref(cardPrefs, selectedId);
+    prefs.alwaysTimer = card.alwaysTimer;
+    prefs.audio = card.audio;
+    prefs.haptics = card.haptics;
+    prefs.bodySetup = card.bodySetup;
+    prefs.hum = card.hum;
+    selectedMinutes = card.duration;
+    setSwitch(prefTimerEl, prefs.alwaysTimer);
+    setSwitch(prefAudioEl, prefs.audio);
+    setSwitch(prefHapticsEl, prefs.haptics);
+    setSwitch(prefBodySetupEl, prefs.bodySetup);
+    setSwitch(prefHumEl, prefs.hum);
+    applyNativeGates();
+    syncHumPrefUi();
+    syncDurationUi();
+  }
+
+  function persistSelectedCard() {
+    const patch = {
+      alwaysTimer: prefs.alwaysTimer,
+      audio: prefs.audio,
+      bodySetup: prefs.bodySetup,
+      hum: prefs.hum,
+      duration: selectedMinutes,
+    };
+    if (hapticsSupported) {
+      patch.haptics = prefs.haptics;
+    }
+    cardPrefs = updateCardPrefs(cardPrefs, selectedId, patch);
+    writeCards(cardPrefs);
+  }
+
+  function rememberPattern(id) {
+    try {
+      window.localStorage.setItem("breathe.pattern", id);
+    } catch (err) {
+      /* private mode */
+    }
+  }
+
+  function selectPattern(id) {
+    if (id !== "urge" && !Object.prototype.hasOwnProperty.call(PATTERNS, id)) {
+      return;
+    }
+    selectedId = id;
+    applyCardToSession();
+    rememberPattern(id);
   }
 
   function syncDurationUi() {
@@ -248,7 +307,7 @@
 
   function techniqueText(pattern) {
     let text = pattern.technique || "";
-    if (prefs.hum && (pattern.id === "rest" || pattern.id === "sleep")) {
+    if (prefs.hum && humAllowed(pattern.id)) {
       text += " Hum softly on the exhale.";
     }
     return text;
@@ -265,7 +324,7 @@
     if (!prefHumEl) {
       return;
     }
-    const allowed = selectedId === "rest" || selectedId === "sleep";
+    const allowed = humAllowed(selectedId);
     prefHumEl.disabled = !allowed;
     if (prefHumWrapEl) {
       prefHumWrapEl.classList.toggle("is-unavailable", !allowed);
@@ -363,29 +422,21 @@
   }
 
   function loadPrefs() {
-    prefs.alwaysTimer = readPref(PREF_KEYS.alwaysTimer);
-    prefs.audio = readPref(PREF_KEYS.audio);
-    prefs.haptics = readPref(PREF_KEYS.haptics);
-    prefs.bodySetup = readPref(PREF_KEYS.bodySetup, true);
-    prefs.hum = readPref(PREF_KEYS.hum);
+    const loaded = loadCardPrefs(readBreatheStorage());
+    cardPrefs = loaded.cards;
+    if (loaded.migrated) {
+      writeCards(cardPrefs);
+    }
     prefs.reminder = readPref(native.KEYS.reminder);
     prefs.reminderTime = readReminderTime();
     prefs.health = readPref(native.KEYS.health);
-    selectedMinutes = readDurationMinutes();
-    setSwitch(prefTimerEl, prefs.alwaysTimer);
-    setSwitch(prefAudioEl, prefs.audio);
-    setSwitch(prefHapticsEl, prefs.haptics);
-    setSwitch(prefBodySetupEl, prefs.bodySetup);
-    setSwitch(prefHumEl, prefs.hum);
     setSwitch(prefReminderEl, prefs.reminder);
     setSwitch(prefHealthEl, prefs.health);
     if (prefReminderTimeEl) {
       prefReminderTimeEl.value = prefs.reminderTime;
     }
-    applyNativeGates();
+    applyCardToSession();
     armReminder();
-    syncDurationUi();
-    syncHumPrefUi();
   }
 
   function motionQuery() {
@@ -572,9 +623,8 @@
       copy.append(label, protocol);
       button.append(orb, copy);
       button.addEventListener("click", function () {
-        selectedId = id;
+        selectPattern(id);
         renderHome();
-        previewHomeAtmosphere();
       });
       patternsEl.append(button);
     });
@@ -662,8 +712,7 @@
     if (!oscNode || !audioCtx) {
       return;
     }
-    const hummable =
-      prefs.hum && (activePattern.id === "rest" || activePattern.id === "sleep");
+    const hummable = prefs.hum && humAllowed(activePattern.id);
     const humNow = hummable && isExhalePhase(snapshot.phase);
     try {
       if (humNow) {
@@ -684,8 +733,7 @@
     }
     applyHumTone(snapshot);
     const level = audioLevel(snapshot);
-    const hummable =
-      prefs.hum && (activePattern.id === "rest" || activePattern.id === "sleep");
+    const hummable = prefs.hum && humAllowed(activePattern.id);
     const humNow = hummable && isExhalePhase(snapshot.phase);
     const target = humNow ? Math.min(level, 0.04) : level;
     try {
@@ -1552,16 +1600,11 @@
       return;
     }
     try {
-      const keys = [];
-      for (let i = 0; i < window.localStorage.length; i += 1) {
-        const key = window.localStorage.key(i);
-        if (key && key.indexOf("breathe.") === 0) {
-          keys.push(key);
-        }
-      }
-      keys.forEach(function (key) {
+      const cleared = resetCardPrefs(readBreatheStorage());
+      cleared.removedKeys.forEach(function (key) {
         window.localStorage.removeItem(key);
       });
+      window.localStorage.removeItem(CARDS_KEY);
     } catch (err) {
       /* private mode */
     }
@@ -1674,18 +1717,18 @@
         return;
       }
       selectedMinutes = minutes;
-      writeDurationMinutes(minutes);
+      persistSelectedCard();
       syncDurationUi();
     });
   }
 
   bindSwitch(prefTimerEl, function (on) {
     prefs.alwaysTimer = on;
-    writePref(PREF_KEYS.alwaysTimer, prefs.alwaysTimer);
+    persistSelectedCard();
   });
   bindSwitch(prefAudioEl, function (on) {
     prefs.audio = on;
-    writePref(PREF_KEYS.audio, prefs.audio);
+    persistSelectedCard();
   });
   bindSwitch(prefHapticsEl, function (on) {
     if (!hapticsSupported) {
@@ -1694,15 +1737,15 @@
       return;
     }
     prefs.haptics = on;
-    writePref(PREF_KEYS.haptics, prefs.haptics);
+    persistSelectedCard();
   });
   bindSwitch(prefBodySetupEl, function (on) {
     prefs.bodySetup = on;
-    writePref(PREF_KEYS.bodySetup, prefs.bodySetup);
+    persistSelectedCard();
   });
   bindSwitch(prefHumEl, function (on) {
     prefs.hum = on;
-    writePref(PREF_KEYS.hum, prefs.hum);
+    persistSelectedCard();
     previewHomeAtmosphere();
   });
   bindSwitch(prefReminderEl, function (on) {
@@ -1839,7 +1882,7 @@
 
     const index = Number(key) - 1;
     if (index >= 0 && index < PATTERN_ORDER.length) {
-      selectedId = PATTERN_ORDER[index];
+      selectPattern(PATTERN_ORDER[index]);
       renderHome();
     }
     if (key === "Enter") {
@@ -1873,13 +1916,13 @@
     getState: getState,
     start: function (id) {
       if (id === "urge" || (id == null && urgeSelected())) {
-        selectedId = "urge";
+        selectPattern("urge");
         renderHome();
         startRideUrge();
         return;
       }
       if (PATTERNS[id]) {
-        selectedId = id;
+        selectPattern(id);
         renderHome();
       }
       sessionKind = "normal";
@@ -1908,7 +1951,7 @@
         return;
       }
       selectedMinutes = minutes;
-      writeDurationMinutes(minutes);
+      persistSelectedCard();
       syncDurationUi();
     },
     PATTERNS: PATTERNS,

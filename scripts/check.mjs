@@ -688,7 +688,7 @@ const persistSrc = js + engineSrc;
 assert(js.includes("localStorage") && persistSrc.includes("breathe.alwaysTimer") && persistSrc.includes("breathe.audio") && persistSrc.includes("breathe.haptics"), "toggles must persist via localStorage keys");
 assert(engine.PREF_KEYS.duration === "breathe.duration" && persistSrc.includes("breathe.duration"), "selected duration must persist in localStorage");
 assert(persistSrc.includes("breathe.bodySetup") && persistSrc.includes("breathe.hum"), "body setup and hum prefs must persist");
-assert(/readPref\(\s*PREF_KEYS\.bodySetup\s*,\s*true\s*\)/.test(js), "body setup must treat a missing key as on");
+assert(engine.loadCardPrefs({}).cards.rest.bodySetup === true, "body setup must treat a missing key as on");
 assert(/createSessionClock\(ms\)/.test(js) && /planGlimpses\(ms\)/.test(js), "session clock and glimpses must use the selected duration");
 assert(/effectiveMinutes\(currentPattern\(\),\s*selectedMinutes\)/.test(js), "session length must go through effectiveMinutes so Energy caps at 1 minute");
 assert(/PATTERN_ORDER = \["rest", "energy", "hrv", "focus", "sleep", "urge"\]/.test(js), "home cards must be Calm Down, Energy, HRV, Focus, Sleep, then Think First");
@@ -720,6 +720,103 @@ assert(Object.keys(engine.PREF_KEYS).length === 6, "Ride the Urge must not add a
 ["alwaysTimer", "audio", "haptics", "duration", "bodySetup", "hum"].forEach(function (key) {
   assert(Object.prototype.hasOwnProperty.call(engine.PREF_KEYS, key), "missing pref " + key);
 });
+assert(engine.CARDS_KEY === "breathe.cards", "per-card settings use one breathe.cards record");
+assert(engine.CARD_PREF_IDS.length === 6, "every card has its own settings slot");
+["rest", "energy", "hrv", "focus", "sleep", "urge"].forEach(function (id) {
+  assert(engine.CARD_PREF_IDS.indexOf(id) !== -1, "missing card slot " + id);
+});
+assert(engine.humAllowed("rest") === true && engine.humAllowed("sleep") === true, "hum applies to Calm Down and Sleep");
+assert(
+  engine.humAllowed("energy") === false &&
+    engine.humAllowed("hrv") === false &&
+    engine.humAllowed("focus") === false &&
+    engine.humAllowed("urge") === false,
+  "hum does not apply to the other cards"
+);
+{
+  const migrated = engine.loadCardPrefs({
+    "breathe.duration": "10",
+    "breathe.alwaysTimer": "1",
+    "breathe.audio": "1",
+    "breathe.haptics": "0",
+    "breathe.bodySetup": "0",
+    "breathe.hum": "1",
+  });
+  assert(migrated.migrated === true, "missing card record migrates from legacy keys");
+  engine.CARD_PREF_IDS.forEach(function (id) {
+    const card = migrated.cards[id];
+    assert(card.duration === 10, id + " inherits legacy duration");
+    assert(card.alwaysTimer === true, id + " inherits legacy timer");
+    assert(card.audio === true, id + " inherits legacy audio");
+    assert(card.haptics === false, id + " inherits legacy haptics");
+    assert(card.bodySetup === false, id + " inherits legacy body setup");
+    assert(card.hum === true, id + " inherits legacy hum");
+  });
+  const fresh = engine.loadCardPrefs({});
+  assert(
+    fresh.migrated === true && fresh.cards.rest.duration === 5 && fresh.cards.rest.alwaysTimer === false && fresh.cards.rest.audio === false && fresh.cards.rest.haptics === false && fresh.cards.rest.bodySetup === true && fresh.cards.rest.hum === false,
+    "unsaved cards use factory defaults"
+  );
+  assert(fresh.cards.focus.bodySetup === true && fresh.cards.sleep.hum === false && fresh.cards.urge.duration === 5, "factory defaults apply to every card");
+  assert(engine.loadCardPrefs({ "breathe.duration": "1" }).cards.hrv.bodySetup === true, "body setup stays on when its legacy key is missing");
+  const beforeMigrate = JSON.stringify(migrated.cards);
+  let isolated = engine.updateCardPrefs(migrated.cards, "rest", { duration: 2, audio: false, hum: false });
+  assert(JSON.stringify(migrated.cards) === beforeMigrate, "saving a card does not mutate the previous map");
+  assert(isolated.rest.duration === 2 && isolated.rest.audio === false && isolated.rest.hum === false && isolated.rest.alwaysTimer === true, "saving rest updates only rest");
+  assert(isolated.energy.duration === 10 && isolated.energy.audio === true && isolated.energy.hum === true, "saving rest does not change energy");
+  isolated = engine.updateCardPrefs(isolated, "focus", { duration: 10, alwaysTimer: true });
+  isolated = engine.updateCardPrefs(isolated, "sleep", { hum: true, audio: true, duration: 2 });
+  isolated = engine.updateCardPrefs(isolated, "urge", { haptics: false, bodySetup: false });
+  assert(isolated.focus.duration === 10 && isolated.focus.alwaysTimer === true && isolated.focus.hum === true && isolated.focus.audio === true, "focus keeps its own switches");
+  assert(isolated.sleep.duration === 2 && isolated.sleep.hum === true && isolated.sleep.audio === true && isolated.sleep.alwaysTimer === true && isolated.sleep.haptics === false, "sleep settings do not leak from focus");
+  assert(isolated.urge.bodySetup === false && isolated.urge.haptics === false && isolated.urge.duration === 10 && isolated.urge.alwaysTimer === true, "Think First switches are stored on that card");
+  assert(isolated.rest.duration === 2 && isolated.energy.haptics === false && isolated.hrv.duration === 10, "untouched cards keep migrated values");
+  const roundTrip = engine.loadCardPrefs({
+    "breathe.cards": engine.serializeCardPrefs(isolated),
+    "breathe.duration": "1",
+    "breathe.audio": "0",
+    "breathe.hum": "0",
+  });
+  assert(roundTrip.migrated === false, "an existing card record is not migrated again");
+  assert(roundTrip.cards.rest.duration === 2 && roundTrip.cards.energy.duration === 10, "load reads per-card durations, not the legacy duration");
+  assert(roundTrip.cards.energy.audio === true && roundTrip.cards.rest.audio === false, "legacy audio does not override a saved card");
+  assert(roundTrip.cards.sleep.hum === true && roundTrip.cards.rest.hum === false, "reloading keeps each card's hum switch");
+  const partial = engine.loadCardPrefs({
+    "breathe.cards": JSON.stringify({ hrv: { duration: 1, alwaysTimer: true } }),
+    "breathe.duration": "2",
+    "breathe.haptics": "1",
+  });
+  assert(partial.migrated === false && partial.cards.hrv.duration === 1 && partial.cards.hrv.alwaysTimer === true, "saved card fields win");
+  assert(partial.cards.hrv.haptics === true && partial.cards.hrv.bodySetup === true && partial.cards.hrv.audio === false, "missing fields fall back to legacy or factory defaults");
+  assert(partial.cards.focus.duration === 2 && partial.cards.rest.haptics === true && partial.cards.sleep.duration === 2, "cards missing from the record keep the legacy defaults");
+  const bad = engine.loadCardPrefs({ "breathe.cards": "{", "breathe.duration": "2", "breathe.bodySetup": "0" });
+  assert(bad.migrated === true && bad.cards.sleep.duration === 2 && bad.cards.urge.bodySetup === false, "invalid card JSON falls back to legacy defaults");
+  const ignored = engine.updateCardPrefs(fresh.cards, "nope", { duration: 1, audio: true });
+  assert(ignored.rest.duration === 5 && ignored.rest.audio === false && ignored.energy.duration === 5, "unknown card ids are ignored");
+  const cleared = engine.resetCardPrefs({
+    "breathe.cards": engine.serializeCardPrefs(isolated),
+    "breathe.duration": "10",
+    "breathe.alwaysTimer": "1",
+    "breathe.audio": "1",
+    "breathe.haptics": "1",
+    "breathe.bodySetup": "0",
+    "breathe.hum": "1",
+    "breathe.pattern": "sleep",
+    "breathe.reminder": "1",
+  });
+  ["breathe.cards", "breathe.duration", "breathe.alwaysTimer", "breathe.audio", "breathe.haptics", "breathe.bodySetup", "breathe.hum", "breathe.pattern", "breathe.reminder"].forEach(function (key) {
+    assert(cleared.removedKeys.indexOf(key) !== -1, "reset clears " + key);
+  });
+  engine.CARD_PREF_IDS.forEach(function (id) {
+    const card = cleared.cards[id];
+    assert(card.duration === 5 && card.alwaysTimer === false && card.audio === false && card.haptics === false && card.bodySetup === true && card.hum === false, "reset restores defaults for " + id);
+  });
+  const afterReset = engine.loadCardPrefs({});
+  assert(afterReset.cards.focus.duration === 5 && afterReset.cards.energy.bodySetup === true && afterReset.cards.urge.hum === false, "loading after a reset uses factory defaults");
+}
+assert(/function selectPattern/.test(js) && /selectPattern\(id\)/.test(js) && /selectPattern\(PATTERN_ORDER\[index\]\)/.test(js), "cards and number keys load that card's settings");
+assert(/loadCardPrefs\(/.test(js) && /updateCardPrefs\(/.test(js) && /resetCardPrefs\(/.test(js), "the app saves, loads, and resets per-card settings through the helpers");
+assert(/breathe\.cards/.test(readme), "README must document per-card settings");
 assert(!/breathe\.urge/.test(persistSrc), "Ride the Urge must not add a localStorage key");
 assert(!/localStorage\.setItem\([^)]*urge/i.test(js), "Ride the Urge must not write storage");
 assert(/easePhases\(basePattern\(\),\s*easeLevel\)/.test(js) && /cycleOriginMs/.test(js), "Ease must apply from the next cycle via cycleOriginMs");
