@@ -822,6 +822,52 @@ assert(!/localStorage\.setItem\([^)]*urge/i.test(js), "Ride the Urge must not wr
 assert(/easePhases\(basePattern\(\),\s*easeLevel\)/.test(js) && /cycleOriginMs/.test(js), "Ease must apply from the next cycle via cycleOriginMs");
 assert(/Hum softly on the exhale/.test(js), "hum toggle must mention humming on the home technique line");
 assert(/triangle/.test(js) && /HUM_EXHALE_HZ/.test(js), "humming must switch the exhale tone when soft audio is on");
+assert(/audioEnvelope\(/.test(js) && /phase\.seconds\s*\*\s*1000/.test(js), "soft audio must schedule audioEnvelope for the eased phase length");
+assert(/cancelScheduledValues/.test(js) && /linearRampToValueAtTime/.test(js) && /setTargetAtTime/.test(js), "phase changes must cancel schedules and ramp without clicks");
+assert(/createDynamicsCompressor/.test(js) && /AUDIO_GAIN_CEILING/.test(js), "soft audio must keep a master gain ceiling and a limiter");
+{
+  const humBind = js.slice(js.indexOf("bindSwitch(prefHumEl"), js.indexOf("bindSwitch(prefReminderEl"));
+  assert(
+    /prefs\.hum\s*=\s*on/.test(humBind) && /prefs\.audio\s*=\s*true/.test(humBind) && /setSwitch\(\s*prefAudioEl\s*,\s*true\s*\)/.test(humBind) && /persistSelectedCard\(/.test(humBind),
+    "turning Hum on enables and saves Soft audio for that card"
+  );
+}
+{
+  const ceiling = engine.AUDIO_GAIN_CEILING;
+  assert(ceiling <= 0.35, "master gain ceiling is at most 0.35");
+  const inhale = engine.audioEnvelope("inhale", 4000, "tone");
+  const inhaleEased = engine.audioEnvelope("inhale", 2000, "tone");
+  assert(inhale.endFreq > inhale.startFreq, "inhale rises in pitch");
+  assert(inhale.peakGain > inhale.startGain && inhale.endGain > inhale.startGain, "inhale rises in gain");
+  assert(inhale.peakGain <= ceiling && inhale.startGain <= ceiling && inhale.endGain <= ceiling, "inhale peak stays under the ceiling");
+  assert(inhaleEased.attackMs < inhale.attackMs, "inhale envelope scales with the eased duration");
+  const exhale = engine.audioEnvelope("exhale", 6000, "tone");
+  const exhaleEased = engine.audioEnvelope("exhale", 4000, "tone");
+  assert(exhale.endFreq < exhale.startFreq, "exhale falls in pitch");
+  assert(exhale.startFreq < inhale.endFreq, "exhale starts lower in pitch than the inhale finishes");
+  assert(exhale.endGain <= exhale.startGain * 0.3, "exhale fades to at most 30% of its start gain");
+  assert(exhale.endGain < exhale.startGain, "exhale falls in gain");
+  assert(exhale.peakGain <= ceiling, "exhale peak stays under the ceiling");
+  assert(exhaleEased.releaseMs < exhale.releaseMs, "exhale envelope scales with the eased duration");
+  const hum = engine.audioEnvelope("exhale", 6000, "hum");
+  assert(hum.startFreq <= engine.HUM_EXHALE_HZ && hum.endFreq < hum.startFreq, "hum exhale stays on the low tone and falls");
+  assert(hum.endGain <= hum.startGain * 0.3, "hum exhale fades substantially");
+  const hold = engine.audioEnvelope("hold", 4000, "tone");
+  assert(hold.attackMs + hold.releaseMs <= 400, "hold tick is short");
+  assert(hold.attackMs + hold.releaseMs < 4000 * 0.2, "hold tick does not fill the hold");
+  assert(hold.peakGain <= ceiling, "hold tick stays under the ceiling");
+  const top = engine.audioEnvelope("inhale2", 1000, "tone");
+  assert(top.endFreq > top.startFreq, "Calm Down top-up blip rises in pitch");
+  assert(top.attackMs + top.releaseMs < inhale.attackMs, "top-up blip is shorter than a full inhale rise");
+  ["tone", "hum"].forEach(function (mode) {
+    ["inhale", "inhale2", "exhale", "hold"].forEach(function (id) {
+      [1000, 2000, 4000, 6000].forEach(function (ms) {
+        const env = engine.audioEnvelope(id, ms, mode);
+        assert(env.peakGain <= ceiling && env.startGain <= ceiling && env.endGain <= ceiling, id + " " + mode + " " + ms + " stays under the ceiling");
+      });
+    });
+  });
+}
 assert(/dropCountAfterMs/.test(js), "Sleep must drop the on-screen count after the settle window");
 assert(/What's the smallest next move\?/.test(js) || /showNextMove/.test(js), "completion must reveal the next-move line");
 assert(!/countdownEl\.textContent = "5:00"/.test(js), "home/session countdown must not hard-code 5:00");
@@ -991,8 +1037,8 @@ assert(/sw\.js/.test(js), "app must register the service worker");
 assert(/"display"\s*:\s*"standalone"/.test(manifest), "manifest should be installable (standalone)");
 assert(sw.includes("caches") && sw.includes("index.html") && sw.includes("engine.js") && sw.includes("native.js"), "service worker must cache the static app shell");
 assert(html.indexOf('src="native.js"') !== -1 && html.indexOf('src="native.js"') < html.indexOf('src="app.js"'), "native.js must load before app.js");
-assert(/const CACHE = "breathe-shell-v9"/.test(sw), "service worker cache name must bump to breathe-shell-v9");
-assert(!/breathe-shell-v1|breathe-shell-v2|breathe-shell-v3|breathe-shell-v4|breathe-shell-v5|breathe-shell-v6|breathe-shell-v7|breathe-shell-v8/.test(sw), "service worker must not keep an older cache name");
+assert(/const CACHE = "breathe-shell-v10"/.test(sw), "service worker cache name must bump to breathe-shell-v10");
+assert(!/breathe-shell-v(?:[1-9])(?!\d)/.test(sw), "service worker must not keep an older cache name");
 ["privacy.html", "support.html", "icon-180.png", "icon-1024.png", "icon-maskable-512.png"].forEach(function (asset) {
   assert(sw.includes(asset), "service worker must cache " + asset);
 });
@@ -1010,7 +1056,7 @@ assert(/First nasal inhale \| 2/.test(readme) && /Second nasal top-up \| 1/.test
 assert(/Add to Home Screen/.test(readme) && /file:\/\//.test(readme) && /http\.server/.test(readme), "README must document PWA install vs file://");
 assert(/^# Practical Breathing/m.test(readme), "README title must be Practical Breathing");
 assert(/home wordmark/.test(readme) && /Practical Breathing/.test(readme), "README must document the Practical Breathing wordmark");
-assert(/breathe-shell-v9/.test(readme), "README must document the v9 cache");
+assert(/breathe-shell-v10/.test(readme), "README must document the v10 cache");
 assert(/performance\.now/.test(readme), "README must document timestamp-based session timing");
 assert(/Manual checklist/.test(readme), "README must keep a manual checklist");
 assert(!/Quick Reset/.test(readme), "README must not document Quick Reset");

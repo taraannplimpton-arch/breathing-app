@@ -10,7 +10,8 @@
     opacityFor,
     formatTime,
     foreshadowActive,
-    audioLevel,
+    audioEnvelope,
+    AUDIO_GAIN_CEILING,
     createSessionClock,
     planGlimpses,
     isCountdownVisible,
@@ -131,6 +132,9 @@
   let audioCtx = null;
   let gainNode = null;
   let oscNode = null;
+  let limiterNode = null;
+  let masterGain = null;
+  let audioPhaseKey = "";
 
   function urgeSelected() {
     return selectedId === "urge";
@@ -645,6 +649,7 @@
   }
 
   function stopAudio() {
+    audioPhaseKey = "";
     if (gainNode && audioCtx) {
       try {
         gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
@@ -665,6 +670,8 @@
       const ctx = audioCtx;
       audioCtx = null;
       gainNode = null;
+      limiterNode = null;
+      masterGain = null;
       try {
         ctx.close();
       } catch (err) {
@@ -674,13 +681,19 @@
   }
 
   function muteAudio() {
-    if (gainNode && audioCtx) {
-      try {
-        gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-        gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.04);
-      } catch (err) {
-        /* ignore */
+    audioPhaseKey = "";
+    if (!gainNode || !audioCtx) {
+      return;
+    }
+    try {
+      const now = audioCtx.currentTime;
+      gainNode.gain.cancelScheduledValues(now);
+      if (oscNode) {
+        oscNode.frequency.cancelScheduledValues(now);
       }
+      gainNode.gain.setTargetAtTime(0, now, 0.03);
+    } catch (err) {
+      /* ignore */
     }
   }
 
@@ -699,8 +712,18 @@
       oscNode.frequency.value = HUM_INHALE_HZ || 174.61;
       gainNode = audioCtx.createGain();
       gainNode.gain.value = 0;
+      limiterNode = audioCtx.createDynamicsCompressor();
+      limiterNode.threshold.value = -8;
+      limiterNode.knee.value = 3;
+      limiterNode.ratio.value = 20;
+      limiterNode.attack.value = 0.002;
+      limiterNode.release.value = 0.08;
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = Math.min(1, AUDIO_GAIN_CEILING / 0.35);
       oscNode.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
+      gainNode.connect(limiterNode);
+      limiterNode.connect(masterGain);
+      masterGain.connect(audioCtx.destination);
       oscNode.start();
     }
     if (audioCtx.state === "suspended") {
@@ -708,22 +731,91 @@
     }
   }
 
-  function applyHumTone(snapshot) {
-    if (!oscNode || !audioCtx) {
+  function scheduleAudioEnvelope(snapshot) {
+    if (!oscNode || !gainNode || !audioCtx || !snapshot || !snapshot.phase) {
       return;
     }
-    const hummable = prefs.hum && humAllowed(activePattern.id);
-    const humNow = hummable && isExhalePhase(snapshot.phase);
-    try {
-      if (humNow) {
-        oscNode.type = "triangle";
-        oscNode.frequency.setTargetAtTime(HUM_EXHALE_HZ, audioCtx.currentTime, 0.08);
-      } else {
-        oscNode.type = "sine";
-        oscNode.frequency.setTargetAtTime(HUM_INHALE_HZ, audioCtx.currentTime, 0.08);
+    const phase = snapshot.phase;
+    const durationMs = Math.max(1, phase.seconds * 1000);
+    const progress = Math.max(0, Math.min(0.999, snapshot.progress || 0));
+    const humNow = prefs.hum && humAllowed(activePattern.id) && isExhalePhase(phase) && HUM_EXHALE_HZ > 0;
+    const env = audioEnvelope(phase.id, durationMs, humNow ? "hum" : "tone");
+    const now = audioCtx.currentTime;
+    const freq = oscNode.frequency;
+    const gain = gainNode.gain;
+    oscNode.type = humNow ? "triangle" : "sine";
+    freq.cancelScheduledValues(now);
+    gain.cancelScheduledValues(now);
+
+    const total = durationMs / 1000;
+    const elapsed = progress * total;
+    const blip = env.attackMs + env.releaseMs < durationMs * 0.75;
+    const attack = env.attackMs / 1000;
+    const release = env.releaseMs / 1000;
+    const freqSpan = blip ? Math.min(total, attack + release) : total;
+    const freqU = freqSpan > 0 ? Math.min(1, elapsed / freqSpan) : 1;
+    const freqNow = env.startFreq + (env.endFreq - env.startFreq) * freqU;
+    freq.setValueAtTime(freqNow, now);
+    if (Math.abs(env.endFreq - freqNow) > 0.5) {
+      freq.linearRampToValueAtTime(env.endFreq, now + Math.max(0.03, freqSpan - elapsed));
+    }
+
+    let points;
+    if (blip) {
+      points = [
+        { t: 0, g: env.startGain },
+        { t: attack, g: env.peakGain },
+        { t: attack + release, g: env.endGain },
+        { t: total, g: env.endGain },
+      ];
+    } else {
+      const releaseStart = Math.max(attack, total - release);
+      points = [
+        { t: 0, g: env.startGain },
+        { t: attack, g: env.peakGain },
+        { t: releaseStart, g: env.peakGain },
+        { t: total, g: env.endGain },
+      ];
+    }
+
+    function gainAt(t) {
+      if (t <= points[0].t) {
+        return points[0].g;
       }
-    } catch (err) {
-      /* ignore */
+      for (let i = 1; i < points.length; i += 1) {
+        const left = points[i - 1];
+        const right = points[i];
+        if (t <= right.t) {
+          const span = right.t - left.t;
+          const u = span > 0 ? (t - left.t) / span : 1;
+          return left.g + (right.g - left.g) * u;
+        }
+      }
+      return points[points.length - 1].g;
+    }
+
+    const live = Number.isFinite(gain.value) ? gain.value : 0;
+    const gNow = gainAt(elapsed);
+    gain.setValueAtTime(live, now);
+    let cursor = now;
+    const nextPoint = points.find(function (point) {
+      return point.t > elapsed + 0.005;
+    });
+    const untilNext = nextPoint ? nextPoint.t - elapsed : total - elapsed;
+    if (Math.abs(live - gNow) > 0.0008) {
+      const join = Math.min(0.04, Math.max(0.012, untilNext * 0.35));
+      cursor = now + join;
+      gain.linearRampToValueAtTime(gNow, cursor);
+    }
+    for (let i = 0; i < points.length; i += 1) {
+      if (points[i].t <= elapsed + 0.005) {
+        continue;
+      }
+      const when = now + (points[i].t - elapsed);
+      if (when > cursor + 0.008) {
+        gain.linearRampToValueAtTime(Math.min(AUDIO_GAIN_CEILING, points[i].g), when);
+        cursor = when;
+      }
     }
   }
 
@@ -731,13 +823,14 @@
     if (!prefs.audio || !gainNode || !audioCtx || clock.isPaused() || completing) {
       return;
     }
-    applyHumTone(snapshot);
-    const level = audioLevel(snapshot);
-    const hummable = prefs.hum && humAllowed(activePattern.id);
-    const humNow = hummable && isExhalePhase(snapshot.phase);
-    const target = humNow ? Math.min(level, 0.04) : level;
+    const humNow = prefs.hum && humAllowed(activePattern.id) && isExhalePhase(snapshot.phase);
+    const key = snapshot.index + ":" + snapshot.phase.id + ":" + snapshot.phase.seconds + ":" + (humNow ? "hum" : "tone");
+    if (key === audioPhaseKey) {
+      return;
+    }
+    audioPhaseKey = key;
     try {
-      gainNode.gain.setTargetAtTime(target, audioCtx.currentTime, 0.12);
+      scheduleAudioEnvelope(snapshot);
     } catch (err) {
       /* ignore */
     }
@@ -1058,6 +1151,7 @@
     pauseBtn.setAttribute("aria-pressed", "false");
     syncEaseUi();
     hideNextMove();
+    audioPhaseKey = "";
     startAudio();
     acquireWakeLock();
     paint(performance.now());
@@ -1745,6 +1839,10 @@
   });
   bindSwitch(prefHumEl, function (on) {
     prefs.hum = on;
+    if (on) {
+      prefs.audio = true;
+      setSwitch(prefAudioEl, true);
+    }
     persistSelectedCard();
     previewHomeAtmosphere();
   });

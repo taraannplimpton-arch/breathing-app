@@ -21,6 +21,7 @@
 
   const HUM_INHALE_HZ = 174.61;
   const HUM_EXHALE_HZ = 123.47;
+  const AUDIO_GAIN_CEILING = 0.35;
 
   function cycleMs(pattern) {
     return pattern.phases.reduce(function (sum, phase) {
@@ -259,6 +260,65 @@
       return lerp(0.055, 0.01, easeInOut(snapshot.progress));
     }
     return snapshot.previous && isExhalePhase(snapshot.previous) ? 0.01 : 0.055;
+  }
+
+  function clampGain(value) {
+    return Math.max(0, Math.min(AUDIO_GAIN_CEILING, value));
+  }
+
+  function audioEnvelope(phaseId, durationMs, mode) {
+    const duration = Math.max(1, Number(durationMs) || 0);
+    const id = String(phaseId || "");
+    const hum = mode === "hum";
+
+    if (id === "hold") {
+      return {
+        startFreq: 523.25,
+        endFreq: 523.25,
+        startGain: 0,
+        peakGain: clampGain(0.12),
+        endGain: 0,
+        attackMs: Math.min(36, Math.max(12, duration * 0.008)),
+        releaseMs: Math.min(120, Math.max(36, duration * 0.02)),
+      };
+    }
+
+    if (id === "inhale2") {
+      return {
+        startFreq: 220,
+        endFreq: 329.63,
+        startGain: clampGain(0.03),
+        peakGain: clampGain(0.16),
+        endGain: clampGain(0.02),
+        attackMs: duration * 0.22,
+        releaseMs: duration * 0.14,
+      };
+    }
+
+    if (id === "exhale") {
+      const startGain = hum ? 0.1 : 0.18;
+      const startFreq = hum ? HUM_EXHALE_HZ : 196;
+      const endFreq = hum ? HUM_EXHALE_HZ * 0.82 : 146.83;
+      return {
+        startFreq: startFreq,
+        endFreq: endFreq,
+        startGain: clampGain(startGain),
+        peakGain: clampGain(startGain),
+        endGain: clampGain(startGain * 0.22),
+        attackMs: Math.min(70, Math.max(16, duration * 0.035)),
+        releaseMs: Math.max(48, duration * 0.97),
+      };
+    }
+
+    return {
+      startFreq: HUM_INHALE_HZ,
+      endFreq: HUM_INHALE_HZ * 1.5,
+      startGain: clampGain(0.045),
+      peakGain: clampGain(0.24),
+      endGain: clampGain(0.24),
+      attackMs: Math.max(48, duration * 0.86),
+      releaseMs: Math.max(24, duration * 0.08),
+    };
   }
 
   function createSessionClock(sessionMs) {
@@ -644,6 +704,8 @@
     resetCardPrefs: resetCardPrefs,
     HUM_INHALE_HZ: HUM_INHALE_HZ,
     HUM_EXHALE_HZ: HUM_EXHALE_HZ,
+    AUDIO_GAIN_CEILING: AUDIO_GAIN_CEILING,
+    audioEnvelope: audioEnvelope,
     cycleMs: cycleMs,
     effectiveMinutes: effectiveMinutes,
     easeSeconds: easeSeconds,

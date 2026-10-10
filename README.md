@@ -82,9 +82,9 @@ Each of the six cards keeps its own session length and its own Always show timer
 
 **Always show timer** keeps the remaining-time counter visible for the whole session (accessibility). Otherwise the counter appears only about four or five times (fewer on 1- and 2-minute sessions): near the start, near the end, and a couple of brief mid-session fades. It fades in and out; it never flashes. The bubble is the continuous cue. On Sleep, counts fade after about four cycles (“drop the count”) unless Always show timer is on.
 
-**Soft audio** is a continuous swell/fade tone tied to inhale and exhale — not a metronome beep. It starts on the Start gesture (browsers block autoplay), and mutes on Pause or End. On iPhone, the silent switch also mutes it.
+**Soft audio** is a gentle followable tone for eyes-closed use — not a metronome beep. The inhale rises in pitch and volume; the exhale starts lower and fades down; each hold gets a short tick; Calm Down’s top-up inhale is a short upward blip. The envelope follows the eased phase length, stays under a soft gain ceiling, and goes silent on Pause. It starts on the Start gesture (browsers block autoplay), and mutes on Pause or End. On iPhone, the silent switch also mutes it.
 
-**Hum on the exhale** (Calm Down and Sleep) adds “Hum softly on the exhale.” to the home technique line. If Soft audio is also on, the exhale uses a gentler low hum-like tone. No extra words during the session.
+**Hum on the exhale** (Calm Down and Sleep) adds “Hum softly on the exhale.” to the home technique line. Turning Hum on also turns on Soft audio for that card. The exhale then keeps a low hum that fades the same way. No extra words during the session.
 
 **Haptics** is a light tap on the inhale, a softer tap on the exhale, nothing on a hold, and a short success tap when the session finishes. Android Chrome uses `navigator.vibrate`. A Median or Despia wrapper uses its native bridge instead. iOS Safari / Add-to-Home-Screen does not implement vibrate, so the Haptics switch is hidden there; **Soft audio** is the iPhone cue. No tap if the toggle is off. Ending early does not play the success tap.
 
@@ -182,7 +182,7 @@ From a served origin (`python3 -m http.server` or any HTTPS host, including GitH
 
 1. Open the app in Chrome, Safari, or Edge.
 2. Use **Add to Home Screen** / **Install app**.
-3. The manifest (`manifest.webmanifest`, name Practical Breathing, short name Breathing) and a small service worker (`sw.js`, cache `breathe-shell-v9`) cache the static shell — `index.html`, `privacy.html`, `support.html`, scripts, styles, and icons — so the app still opens offline.
+3. The manifest (`manifest.webmanifest`, name Practical Breathing, short name Breathing) and a small service worker (`sw.js`, cache `breathe-shell-v10`) cache the static shell — `index.html`, `privacy.html`, `support.html`, scripts, styles, and icons — so the app still opens offline.
 
 Icons: `icon-192.png`, `icon-512.png`, opaque `icon-1024.png` (no transparency, square corners), `icon-180.png` for Apple touch, and a maskable `icon-maskable-512.png` whose circle sits inside the safe zone. They are derived from `favicon.svg`.
 
