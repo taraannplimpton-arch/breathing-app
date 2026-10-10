@@ -121,12 +121,16 @@ nearly(engine.scaleFor(engine.phaseAt(sleep, 4000 - 1)), breathing.MAX_SCALE, 0.
 nearly(engine.scaleFor(engine.phaseAt(sleep, 10000 - 1)), breathing.MIN_SCALE, 0.02, "Sleep exhale should end near MIN_SCALE");
 
 const urge = breathing.URGE;
-assert(Boolean(urge), "Avoid the Urge config must exist");
-assert(urge.homeLabel === "Avoid the Urge", "the sixth card must be labeled Avoid the Urge");
-assert(urge.protocol === "4–6", "Avoid the Urge protocol line must stay short");
-assert(typeof urge.technique === "string" && urge.technique.length > 0 && urge.technique.length <= 80, "Avoid the Urge technique line must be short");
-assert(urge.durationNote === "About 3 minutes.", "Avoid the Urge must say it is about 3 minutes");
-assert(!Object.prototype.hasOwnProperty.call(breathing.PATTERNS, "urge"), "Avoid the Urge stays outside the five timed patterns");
+const thinkFirstDescription = "That airport candy, the reply-all, the cart checkout. Breathe first, then decide.";
+assert(Boolean(urge), "Think First config must exist");
+assert(urge.id === "urge", "Think First must keep the internal id urge");
+assert(urge.homeLabel === "Think First", "the sixth card must be labeled Think First");
+assert(urge.protocol === "4–6", "Think First protocol line must stay short");
+assert(urge.technique === "Stop, notice, then choose.", "Think First technique line must match");
+assert(typeof urge.technique === "string" && urge.technique.length > 0 && urge.technique.length <= 80, "Think First technique line must be short");
+assert(urge.description === thinkFirstDescription, "Think First description must match");
+assert(urge.durationNote === "About 3 minutes.", "Think First must say it is about 3 minutes");
+assert(!Object.prototype.hasOwnProperty.call(breathing.PATTERNS, "urge"), "Think First stays outside the five timed patterns");
 assert(Object.keys(breathing.PATTERNS).length === 5, "the five timed patterns must stay five");
 assert(urge.stopMs === 5000, "Stop must be 5s");
 assert(urge.observeMs === 10000, "Observe must be 10s");
@@ -145,7 +149,7 @@ for (const pattern of Object.values(breathing.PATTERNS)) {
   assert(pattern.colors.inhale.fill !== urge.pattern.colors.inhale.fill, "urge palette must be distinct from " + pattern.id);
 }
 assert(urge.lines.stop === "Pause. Put it down.", "Stop line must match");
-assert(urge.lines.observe === "Notice the urge. Where do you feel it?", "Observe line must match");
+assert(urge.lines.observe === "Notice the pull. Where do you feel it?", "Observe line must match");
 assert(urge.lines.expand === "Notice what changed. Widen your view.", "Expand line must match");
 assert(urge.lines.respond === "What's your next move?", "Respond line must match");
 assert(urge.lines.again === "Another round", "Another round label must match");
@@ -444,7 +448,8 @@ assert(/id="pref-hum"/.test(html) && !/id="pref-hum"[^>]*checked/.test(html), "H
 assert(/id="duration-note"/.test(html), "Energy cap needs a duration note element");
 assert(/Feet/.test(js) && /Stack/.test(js) && /Hands/.test(js) && /Jaw/.test(js) && /Eyes/.test(js) && /Exhale/.test(js), "pre-roll cues must cycle Feet Stack Hands Jaw Eyes Exhale");
 assert(!/\b(Feet|Stack|Hands|Jaw)\b/.test(sessionChunk), "pre-roll cue words must not appear in the session screen");
-assert(!/id="ride-urge"/.test(html), "Avoid the Urge is a pattern card, not a separate home button");
+assert(!/id="ride-urge"/.test(html), "Think First is a pattern card, not a separate home button");
+assert(/id="pattern-description"/.test(html), "home needs a selected-pattern description line");
 const aboutAt = html.indexOf('id="about"');
 const aboutChunk = aboutAt >= 0 ? html.slice(aboutAt, html.indexOf('id="preroll"')) : "";
 assert(aboutAt > 0 && aboutAt < html.indexOf('id="preroll"'), "about screen must sit with the other screens");
@@ -458,6 +463,9 @@ assert(/id="app-version"/.test(aboutChunk), "about must show the version from th
 assert(/faint, dizzy, panicky, or have chest pain/.test(aboutChunk), "about must include the safety note");
 assert(/not medical advice/.test(aboutChunk) && /not for emergencies/.test(aboutChunk), "about must say it is educational, not medical advice, and not for emergencies");
 assert(!aboutChunk.includes(drinkingLine), "about must not include the heavy-drinking line");
+assert(/Think First/.test(aboutChunk), "about must name Think First");
+assert(aboutChunk.includes(thinkFirstDescription), "about must include the Think First description");
+assert(/aria-label="Think First"/.test(html), "the guide screen must be named Think First");
 assert(/noodleelder@gmail\.com/.test(aboutChunk) && !/support@example\.com/.test(aboutChunk), "about must show noodleelder@gmail.com");
 assert(html.includes(breathing.URGE.lines.respond), "respond screen must ask what's your next move");
 assert(html.includes(breathing.URGE.lines.again) && html.includes(breathing.URGE.lines.done), "respond screen needs Another round and Done");
@@ -488,13 +496,13 @@ assert(persistSrc.includes("breathe.bodySetup") && persistSrc.includes("breathe.
 assert(/readPref\(\s*PREF_KEYS\.bodySetup\s*,\s*true\s*\)/.test(js), "body setup must treat a missing key as on");
 assert(/createSessionClock\(ms\)/.test(js) && /planGlimpses\(ms\)/.test(js), "session clock and glimpses must use the selected duration");
 assert(/effectiveMinutes\(currentPattern\(\),\s*selectedMinutes\)/.test(js), "session length must go through effectiveMinutes so Energy caps at 1 minute");
-assert(/PATTERN_ORDER = \["rest", "energy", "hrv", "focus", "sleep", "urge"\]/.test(js), "home cards must be Calm Down, Energy, HRV, Focus, Sleep, then Avoid the Urge");
+assert(/PATTERN_ORDER = \["rest", "energy", "hrv", "focus", "sleep", "urge"\]/.test(js), "home cards must be Calm Down, Energy, HRV, Focus, Sleep, then Think First");
 assert(!/function startQuickReset|sessionKind = "quick-reset"|quickResetMs|QUICK_RESET/.test(js), "Quick Reset must be removed from the app");
 {
   const requestStart = js.indexOf("function requestStart");
   const requestEnd = js.indexOf("function pauseSession", requestStart);
   const requestFn = requestStart >= 0 && requestEnd > requestStart ? js.slice(requestStart, requestEnd) : "";
-  assert(/urgeSelected\(\)/.test(requestFn) && /startRideUrge\(\)/.test(requestFn), "selecting Avoid the Urge and starting must open that flow");
+  assert(/urgeSelected\(\)/.test(requestFn) && /startRideUrge\(\)/.test(requestFn), "selecting Think First and starting must open that flow");
   assert(!/showPreroll/.test(requestFn.split("startRideUrge")[0] || ""), "the urge branch must not show body setup");
 }
 assert(/key === "e" \|\| key === "E"/.test(js) && /bumpEase|easeLevel/.test(js), "Ease needs an E keyboard shortcut");
@@ -550,8 +558,8 @@ assert(/manifest\.webmanifest/.test(html), "HTML must link the web app manifest"
 assert(/sw\.js/.test(js), "app must register the service worker");
 assert(/"display"\s*:\s*"standalone"/.test(manifest), "manifest should be installable (standalone)");
 assert(sw.includes("caches") && sw.includes("index.html") && sw.includes("engine.js"), "service worker must cache the static app shell");
-assert(/const CACHE = "breathe-shell-v6"/.test(sw), "service worker cache name must bump to breathe-shell-v6");
-assert(!/breathe-shell-v1|breathe-shell-v2|breathe-shell-v3|breathe-shell-v4|breathe-shell-v5/.test(sw), "service worker must not keep an older cache name");
+assert(/const CACHE = "breathe-shell-v7"/.test(sw), "service worker cache name must bump to breathe-shell-v7");
+assert(!/breathe-shell-v1|breathe-shell-v2|breathe-shell-v3|breathe-shell-v4|breathe-shell-v5|breathe-shell-v6/.test(sw), "service worker must not keep an older cache name");
 ["privacy.html", "support.html", "icon-180.png", "icon-1024.png", "icon-maskable-512.png"].forEach(function (asset) {
   assert(sw.includes(asset), "service worker must cache " + asset);
 });
@@ -569,7 +577,7 @@ assert(/First nasal inhale \| 2/.test(readme) && /Second nasal top-up \| 1/.test
 assert(/Add to Home Screen/.test(readme) && /file:\/\//.test(readme) && /http\.server/.test(readme), "README must document PWA install vs file://");
 assert(/Manual checklist/.test(readme), "README must keep a manual checklist");
 assert(!/Quick Reset/.test(readme), "README must not document Quick Reset");
-assert(/Calm Down/.test(readme) && /Avoid the Urge/.test(readme), "README must document the six-card names");
+assert(/Calm Down/.test(readme) && /Think First/.test(readme), "README must document the six-card names");
 assert(/Sleep/.test(readme) && /4–6|4-6/.test(readme) && /drop the count|counts fade/i.test(readme), "README must document Sleep 4-6 and drop-the-count");
 assert(/one minute/.test(readme) && /lightheaded/.test(readme) && /More air isn't better/.test(readme), "README must document the Energy 1-minute cap and safety line");
 assert(/Body setup before sessions/.test(readme) && /breathe\.bodySetup/.test(readme), "README must document body setup and its localStorage key");
@@ -577,12 +585,16 @@ assert(/Ease/.test(readme) && /`E`/.test(readme), "README must document Ease and
 assert(!/Spike/.test(readme) && !/Fog/.test(readme) && !/Low energy/.test(readme), "README must not document the removed need chips");
 assert(/Hum on the exhale/.test(readme) && /breathe\.hum/.test(readme) && /Hum softly on the exhale/.test(readme), "README must document humming");
 assert(/What's the smallest next move\?/.test(readme), "README must document the completion prompt");
-assert(/Avoid the Urge/.test(readme), "README must document Avoid the Urge");
+assert(/Think First/.test(readme), "README must document Think First");
+assert(!/Avoid the Urge/.test(readme), "README must not use the old card name");
 assert(!readme.includes(drinkingLine), "README must not include the heavy-drinking line");
+assert(/Stop, notice, then choose\./.test(readme), "README must document the Think First technique line");
+assert(readme.includes(thinkFirstDescription), "README must document the Think First description");
+assert(/Notice the pull\. Where do you feel it\?/.test(readme), "README must document the Observe line");
 assert(/What's your next move\?/.test(readme), "README must document the urge respond line");
 assert(/Another round/.test(readme), "README must document Another round");
-assert(/Avoid the Urge[\s\S]{0,700}ignores the duration picker/.test(readme), "README must say Avoid the Urge ignores the duration picker");
-assert(/About 3 minutes/.test(readme), "README must say Avoid the Urge is about 3 minutes");
+assert(/Think First[\s\S]{0,700}ignores the duration picker/.test(readme), "README must say Think First ignores the duration picker");
+assert(/About 3 minutes/.test(readme), "README must say Think First is about 3 minutes");
 assert(/nothing about an urge is saved|nothing is saved/i.test(readme), "README must say the urge tool stores nothing");
 assert(/`1`–`6`/.test(readme), "README keyboard table must include keys 1-6");
 
@@ -615,6 +627,24 @@ assert(/noodleelder@gmail\.com/.test(privacy) && !/support@example\.com/.test(pr
 assert(/href="\.\/"/.test(privacy) || /href="index\.html"/.test(privacy), "privacy page must link back to the app");
 assert(/viewport-fit=cover/.test(privacy) && /apple-mobile-web-app-capable/.test(privacy), "privacy page must carry the iOS viewport meta");
 assert(/silent/i.test(support) && /haptic/i.test(support) && /reset/i.test(support), "support page must cover silent mode, haptics, and reset");
+assert(/Think First/.test(support), "support page must name Think First");
+assert(storeDoc.includes(thinkFirstDescription), "APP_STORE.md listing copy must include the Think First description");
+assert(/Think First/.test(storeDoc) && /Stop, notice, then choose\./.test(storeDoc), "APP_STORE.md must name Think First and its technique line");
+assert(!/alcohol/i.test(storeDoc), "APP_STORE.md must not mention alcohol");
+["Avoid the Urge", "drink", "craving", "addiction", "relapse"].forEach(function (word) {
+  const banned = word.toLowerCase();
+  [
+    ["index.html", html],
+    ["app.js", js],
+    ["protocols.js", protocolsSrc],
+    ["support.html", support],
+    ["privacy.html", privacy],
+  ].forEach(function (pair) {
+    assert(!pair[1].toLowerCase().includes(banned), pair[0] + " must not mention " + word);
+  });
+});
+assert(/URGE\.description/.test(js), "home must show the Think First description");
+assert(/saved === "urge"/.test(js), "a saved urge id must still select Think First");
 assert(/noodleelder@gmail\.com/.test(support) && !/support@example\.com/.test(support) && !/REPLACE support@example\.com/.test(support), "support page must show noodleelder@gmail.com");
 assert(/href="\.\/"/.test(support), "support page must link back to the app");
 assert(/viewport-fit=cover/.test(support), "support page must set viewport-fit=cover");
@@ -790,4 +820,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log("ok — 6 cards, Energy cap, Sleep drop-count, ease, Avoid the Urge, App Store shell");
+console.log("ok — 6 cards, Energy cap, Sleep drop-count, ease, Think First, App Store shell");

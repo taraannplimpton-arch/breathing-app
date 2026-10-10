@@ -58,6 +58,7 @@
   const easeBtn = document.getElementById("ease-btn");
   const nextMoveEl = document.getElementById("next-move");
   const techniqueEl = document.getElementById("technique");
+  const patternDescriptionEl = document.getElementById("pattern-description");
   const whisperEl = document.getElementById("whisper");
   const durationsEl = document.getElementById("durations");
   const durationNoteEl = document.getElementById("duration-note");
@@ -129,7 +130,11 @@
   function restoreSavedPattern() {
     try {
       const saved = window.localStorage.getItem("breathe.pattern");
-      if (saved === "rest" || (saved && Object.prototype.hasOwnProperty.call(PATTERNS, saved))) {
+      if (
+        saved === "urge" ||
+        saved === "rest" ||
+        (saved && Object.prototype.hasOwnProperty.call(PATTERNS, saved))
+      ) {
         selectedId = saved;
       }
     } catch (err) {
@@ -221,7 +226,7 @@
       }
     }
     if (startEl) {
-      startEl.setAttribute("aria-label", urgeOn ? "Start Avoid the Urge" : "Start session");
+      startEl.setAttribute("aria-label", urgeOn ? "Start Think First" : "Start session");
     }
     if (!clock.isRunning() && !clock.isPaused() && !completing && !prerollActive) {
       countdownEl.textContent = formatTime(selectedSessionMs());
@@ -324,7 +329,7 @@
     if (id === "urge" && URGE && URGE.pattern) {
       return {
         id: "urge",
-        homeLabel: URGE.homeLabel || "Avoid the Urge",
+        homeLabel: URGE.homeLabel || "Think First",
         protocol: URGE.protocol || "4–6",
         colors: URGE.pattern.colors,
       };
@@ -346,6 +351,11 @@
     document.body.dataset.pattern = urgeOn ? "urge" : pattern.id;
     document.body.dataset.mood = pattern.mood || "steady";
     techniqueEl.textContent = urgeOn ? URGE.technique || "" : techniqueText(pattern);
+    if (patternDescriptionEl) {
+      const blurb = urgeOn && URGE && URGE.description ? URGE.description : "";
+      patternDescriptionEl.textContent = blurb;
+      patternDescriptionEl.hidden = !blurb;
+    }
     syncHumPrefUi();
     syncDurationUi();
   }

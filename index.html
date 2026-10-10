@@ -33,7 +33,10 @@
         aria-label="Breathing patterns"
       ></div>
 
-      <p class="technique" id="technique"></p>
+      <div class="technique-block">
+        <p class="technique" id="technique"></p>
+        <p class="technique" id="pattern-description" hidden></p>
+      </div>
 
       <div class="durations" id="durations" role="radiogroup" aria-label="Session length">
         <button type="button" class="duration" role="radio" data-minutes="1" aria-checked="false" aria-label="1 minute">1 min</button>
@@ -74,11 +77,11 @@
         <button type="button" class="session-btn about-close" id="about-close" aria-label="Close about">Close</button>
         <h2 id="about-title">About</h2>
         <p>
-          Breathe is a quiet breathing practice you run on your own device. Six cards: Calm Down, Energy, HRV, Focus, Sleep, and Avoid the Urge. Nothing you do here is uploaded.
+          Breathe is a quiet breathing practice you run on your own device. Six cards: Calm Down, Energy, HRV, Focus, Sleep, and Think First. Nothing you do here is uploaded.
         </p>
         <h3>How to use it</h3>
         <p>
-          Pick a card. Choose 1, 2, 5, or 10 minutes, then Start. Energy is always one minute. Avoid the Urge is about three minutes and does not use that picker. Pause, Ease, or End whenever you want. Body setup, when it is on, shows a few words before a timed session. Soft audio and haptics stay off until you turn them on. Humming is for Calm Down and Sleep.
+          Pick a card. Choose 1, 2, 5, or 10 minutes, then Start. Energy is always one minute. Think First is about three minutes and does not use that picker. That airport candy, the reply-all, the cart checkout. Breathe first, then decide. Pause, Ease, or End whenever you want. Body setup, when it is on, shows a few words before a timed session. Soft audio and haptics stay off until you turn them on. Humming is for Calm Down and Sleep.
         </p>
         <h3>Safety</h3>
         <p>
@@ -101,7 +104,7 @@
       <p class="preroll-hint">Tap to skip</p>
     </div>
 
-    <div id="urge-guide" class="screen urge-guide is-hidden" tabindex="-1" hidden aria-label="Avoid the Urge">
+    <div id="urge-guide" class="screen urge-guide is-hidden" tabindex="-1" hidden aria-label="Think First">
       <p class="urge-line" id="urge-line" aria-live="polite"></p>
     </div>
 

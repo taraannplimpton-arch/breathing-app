@@ -17,6 +17,12 @@ Wrap this static app for iOS. The site is the whole product: offline shell, six 
 
 The manifest is already scoped for GitHub Pages: `id`, `scope`, and `start_url` are `/breathing-app/`. Icon files include 192, 512, opaque 1024 (no alpha, no rounded corners), 180 for the home-screen touch icon, and a maskable 512.
 
+## Listing copy
+
+Think First — Stop, notice, then choose. That airport candy, the reply-all, the cart checkout. Breathe first, then decide. About 3 minutes. It ignores the minute picker.
+
+The other cards are Calm Down, Energy, HRV, Focus, and Sleep. Educational breathing practice. Not medical advice, and not for emergencies.
+
 ## App Privacy
 
 Answer **Data Not Collected**.
@@ -46,19 +52,19 @@ Other native pieces already covered by the web app: portrait standalone display,
 
 ## Health-claim wording
 
-Do not say the app treats, cures, prevents, or diagnoses anything. That includes anxiety, insomnia, panic, PTSD, blood pressure, pain, and addiction.
+Do not say the app treats, cures, prevents, or diagnoses anything. That includes anxiety, insomnia, panic, PTSD, blood pressure, and pain.
 
-Avoid: treatment, cure, therapy, clinical, rehab, “stop drinking,” “quit smoking,” “for addiction.”
+Avoid: treatment, cure, therapy, clinical, rehab.
 
 Prefer: breathing practice, educational, not medical advice, not for emergencies.
 
-Avoid the Urge is a short pause when an impulse shows up. It is not an addiction program. The in-app safety note stays: stop if you feel faint, dizzy, panicky, or have chest pain; consult a doctor first if pregnant or with heart, lung, seizure, or other significant conditions.
+Think First is a short pause before an everyday impulse. The in-app safety note stays: stop if you feel faint, dizzy, panicky, or have chest pain; consult a doctor first if pregnant or with heart, lung, seizure, or other significant conditions.
 
 Screenshot captions and the store description use the same restraint. Do not put a claim in the subtitle that the app itself refuses to make.
 
 ## Screenshots
 
-Capture on the real UI (home with the six cards, a session, Avoid the Urge, About). No fake medical dashboards.
+Capture on the real UI (home with the six cards, a session, Think First, About). No fake medical dashboards.
 
 | Device | Size (pixels, portrait) |
 | --- | --- |
@@ -80,8 +86,8 @@ TODO: if the binary is iPhone-only, do not upload iPad screenshots; say so in Ap
 - TODO: ship native haptics, local notification reminders, both, or neither (4.2 risk if neither).
 - TODO: reminder copy and default schedule, if reminders ship. Off until the person opts in.
 - TODO: age-rating questionnaire answers.
-- TODO: subtitle, description, keywords, and promotional text with no treatment, cure, or addiction claims.
-- TODO: which screenshots show Avoid the Urge.
+- TODO: subtitle, description, keywords, and promotional text with no treatment or cure claims.
+- TODO: which screenshots show Think First.
 - TODO: price (this app is built as free) and availability countries.
 - TODO: export compliance. The web app adds no custom encryption beyond the platform HTTPS stack.
 - TODO: confirm App Privacy stays **Data Not Collected** after the wrapper’s libraries are included.

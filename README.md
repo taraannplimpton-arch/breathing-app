@@ -1,6 +1,6 @@
 # Breathe
 
-A single-page breathing practice. Six cards: **Calm Down**, **Energy**, **HRV**, **Focus**, **Sleep**, and **Avoid the Urge**. Timed sessions last 1, 2, 5, or 10 minutes (default five). Energy is capped at one minute. **Avoid the Urge** is about 3 minutes. It ignores the duration picker and skips body setup. Nothing about an urge is saved.
+A single-page breathing practice. Six cards: **Calm Down**, **Energy**, **HRV**, **Focus**, **Sleep**, and **Think First**. Timed sessions last 1, 2, 5, or 10 minutes (default five). Energy is capped at one minute. **Think First** is about 3 minutes. It ignores the duration picker and skips body setup. Nothing from Think First is saved. Its internal id stays `urge`, so a saved `urge` still opens this card.
 
 Calm Down is the cyclic-sigh pattern. Its internal id stays `rest`, so a saved or selected `rest` still opens this card.
 
@@ -36,13 +36,13 @@ No build step. No dependencies. No requests to other sites.
 ## Using a session
 
 - **Start** begins a session of the selected pattern and length (1, 2, 5, or 10 minutes; default 5:00). Energy always runs one minute even if a longer length is stored.
-- **Avoid the Urge** is the sixth card. Stop, Observe, then 15 nasal breaths (4 in / 6 out, about 2.5 minutes), Expand, then Respond. The number counts breaths from 1 to 10 and starts again at 1, instead of a countdown. **Another round** repeats only the breathing, then returns to Respond. **Done** or **End** goes home. It skips body setup. It ignores the duration picker. Home says so, the same way Energy shows its one-minute note: *About 3 minutes.* Pause, Ease, and End work as in other sessions. Nothing is stored.
+- **Think First** is the sixth card. Stop, Observe, then 15 nasal breaths (4 in / 6 out, about 2.5 minutes), Expand, then Respond. The number counts breaths from 1 to 10 and starts again at 1, instead of a countdown. **Another round** repeats only the breathing, then returns to Respond. **Done** or **End** goes home. It skips body setup. It ignores the duration picker. Home says so, the same way Energy shows its one-minute note: *About 3 minutes.* The technique line is *Stop, notice, then choose.* The description is *That airport candy, the reply-all, the cart checkout. Breathe first, then decide.* Pause, Ease, and End work as in other sessions. Nothing is stored.
 - **Pause** / **Resume** freeze the bubble and the clock. Resume continues the same session; it does not restart. Leaving the app also pauses a running session.
 - **Ease** (`E`) shortens the remaining cycles by about one second per phase, from the next cycle. Tap twice at most. No phase goes under 2 seconds; Calm Down’s 1s top-up stays 1s.
 - **End** returns home immediately. Nothing to earn, nothing to lose. If you leave early, a quiet elapsed time may fade in on home (`1:12`) and then disappear.
 - When the clock hits `0:00`, the screen fades and waits with one quiet line: *What's the smallest next move?* No input, nothing saved. One tap, **Enter**, **Space**, or **Escape** returns home.
 
-If **Body setup before sessions** is on (default), Start first shows a ~10-second pre-roll: *Feet. Stack. Hands. Jaw. Eyes. Exhale.* One word at a time. Tap or **Space** skips it; **Escape** cancels home. Avoid the Urge never shows it. The in-session screen stays numbers-only.
+If **Body setup before sessions** is on (default), Start first shows a ~10-second pre-roll: *Feet. Stack. Hands. Jaw. Eyes. Exhale.* One word at a time. Tap or **Space** skips it; **Escape** cancels home. Think First never shows it. The in-session screen stays numbers-only.
 
 **About** (INFORMATION, top right) explains the app, the safety note, and the version. It links to Privacy and Support. **Reset settings** clears only this app’s `localStorage` keys (anything starting with `breathe.`) after you confirm, then restores defaults.
 
@@ -50,12 +50,12 @@ Keyboard:
 
 | Key | Where | Action |
 | --- | --- | --- |
-| `1`–`6` | Home | Select Calm Down / Energy / HRV / Focus / Sleep / Avoid the Urge |
+| `1`–`6` | Home | Select Calm Down / Energy / HRV / Focus / Sleep / Think First |
 | `Enter` | Home | Start |
 | `Space` | Session | Pause / Resume |
 | `E` | Session | Ease (shorter counts from the next cycle) |
-| `Escape` | Session, pre-roll, urge guide, about, or completion | End (back home) / cancel pre-roll, the urge guide, or about |
-| `Space` / tap | Urge guide | Continue |
+| `Escape` | Session, pre-roll, Think First guide, about, or completion | End (back home) / cancel pre-roll, the Think First guide, or about |
+| `Space` / tap | Think First guide | Continue |
 | `Space` / `Enter` / tap | Completion | Back home |
 | `Space` / tap | Pre-roll | Skip and start |
 
@@ -80,7 +80,7 @@ Timer, audio, and haptics default off (the timer is hidden most of the time unle
 
 **Haptics** is a light `navigator.vibrate` on phase change when the browser supports it (typical Android Chrome). iOS Safari / Add-to-Home-Screen does not implement vibrate, so the toggle is disabled and labeled unavailable on iPhone; **Soft audio** is the iPhone cue. No vibration if the toggle is off.
 
-Home also shows one short technique line for the selected pattern (never during the session). Calm Down is nose inhale, short nose top-up, long mouth exhale — not nose-only. Energy and HRV stay nose in and nose out. Focus (box) is nose for inhale, hold, exhale, and hold. Sleep is a small nasal inhale and an easy longer exhale (nose or soft pursed lips). Avoid the Urge’s technique line is short. The longer doctor note lives on About.
+Home also shows one short technique line for the selected pattern (never during the session). Calm Down is nose inhale, short nose top-up, long mouth exhale — not nose-only. Energy and HRV stay nose in and nose out. Focus (box) is nose for inhale, hold, exhale, and hold. Sleep is a small nasal inhale and an easy longer exhale (nose or soft pursed lips). Think First’s technique line is “Stop, notice, then choose.” Its description is “That airport candy, the reply-all, the cart checkout. Breathe first, then decide.” The longer doctor note lives on About.
 
 ## The five timed protocols
 
@@ -140,16 +140,16 @@ Tactical / box breathing: equal sides, **all through the nose** — nose inhale,
 
 Small breath, easy longer exhale. Counts fade once the rhythm settles — after about four cycles the numbers drop and only the bubble continues (Always show timer still keeps them visible). Atmosphere is dim like Calm Down.
 
-## Avoid the Urge
+## Think First
 
-The sixth home card, for the moment an impulse hits (a drink, smoking, vaping, the phone). It is not one of the five timed protocols: it ignores the minute picker, it does not show body setup, and the home note says *About 3 minutes.* Nothing is saved: no urge log, no streak, and no new `localStorage` key.
+The sixth home card, for an everyday impulse (the airport candy, the reply-all, the cart checkout). It is not one of the five timed protocols: it ignores the minute picker, it does not show body setup, and the home note says *About 3 minutes.* Nothing is saved: no log, no streak, and no new `localStorage` key.
 
-The shape is SOBER from Mindfulness-Based Relapse Prevention (Bowen, Chawla, Marlatt): Stop, Observe, Breathe, Expand, Respond. Urge surfing treats a craving as a wave that usually rises for about a minute and has fallen off by about three. This is a way to sit with that window. It is not a treatment claim, and it is not medical advice.
+The shape is a pause before an impulse: Stop, Observe, Breathe, Expand, Respond. The feeling often rises for about a minute and has fallen off by about three. This is a way to sit with that window. It is not a treatment claim, and it is not medical advice.
 
 | Step | Time | Screen |
 | --- | --- | --- |
 | Stop | ~5s | Pause. Put it down. |
-| Observe | ~10s | Notice the urge. Where do you feel it? Tap or wait. |
+| Observe | ~10s | Notice the pull. Where do you feel it? Tap or wait. |
 | Breathe | 15 breaths, ~2.5 min | Bubble only. Nose, 4s in / 6s out. |
 | Expand | ~8s | Notice what changed. Widen your view. |
 | Respond | until you choose | What's your next move? |
@@ -170,7 +170,7 @@ From a served origin (`python3 -m http.server` or any HTTPS host, including GitH
 
 1. Open the app in Chrome, Safari, or Edge.
 2. Use **Add to Home Screen** / **Install app**.
-3. The manifest (`manifest.webmanifest`) and a small service worker (`sw.js`, cache `breathe-shell-v6`) cache the static shell — `index.html`, `privacy.html`, `support.html`, scripts, styles, and icons — so the app still opens offline.
+3. The manifest (`manifest.webmanifest`) and a small service worker (`sw.js`, cache `breathe-shell-v7`) cache the static shell — `index.html`, `privacy.html`, `support.html`, scripts, styles, and icons — so the app still opens offline.
 
 Icons: `icon-192.png`, `icon-512.png`, opaque `icon-1024.png` (no transparency, square corners), `icon-180.png` for Apple touch, and a maskable `icon-maskable-512.png` whose circle sits inside the safe zone. They are derived from `favicon.svg`.
 
@@ -178,7 +178,7 @@ Icons: `icon-192.png`, `icon-512.png`, opaque `icon-1024.png` (no transparency, 
 
 ## Verify
 
-Automated (protocol timings, Calm Down double-inhale scale, pause/resume clock, sparse timer, PWA files, Sleep, Energy cap, ease, Avoid the Urge, about / privacy / support):
+Automated (protocol timings, Calm Down double-inhale scale, pause/resume clock, sparse timer, PWA files, Sleep, Energy cap, ease, Think First, about / privacy / support):
 
 ```bash
 node scripts/check.mjs
@@ -186,7 +186,7 @@ node scripts/check.mjs
 
 Manual checklist:
 
-1. Home shows six cards in order (Calm Down, Energy, HRV, Focus, Sleep, Avoid the Urge), a technique line, a **1 / 2 / 5 / 10** minute control (default 5), **Start**, an INFORMATION button, and toggles (timer/audio/haptics/hum off by default; body setup on). Home is only those cards. Calm Down’s technique mentions a nose inhale, a short nose top-up, and a long mouth exhale.
+1. Home shows six cards in order (Calm Down, Energy, HRV, Focus, Sleep, Think First), a technique line, a **1 / 2 / 5 / 10** minute control (default 5), **Start**, an INFORMATION button, and toggles (timer/audio/haptics/hum off by default; body setup on). Home is only those cards. Calm Down’s technique mentions a nose inhale, a short nose top-up, and a long mouth exhale.
 2. Start Calm Down. If body setup is on, six words fade, then the session. Controls are **Pause**, **Ease**, and **End** only. No inhale/exhale/hold labels. Atmosphere is dimmer than Energy. The screen stays awake where a wake lock exists. Switching away pauses the session.
 3. Bubble grows in two steps (2s then 1s), then shrinks for 6s. Countdown appears near the start, fades, and is not on screen the whole time (unless Always show timer is on).
 4. **Space** pauses (bubble and clock freeze). **Space** again resumes the same session. **Escape** or **End** returns home with no guilt copy; a quiet elapsed time is optional. **E** / Ease shortens the next cycle.
@@ -194,9 +194,9 @@ Manual checklist:
 6. HRV: equal 5s grow and 5s shrink; bright teal vs deep teal.
 7. Focus: grow, pause large, shrink, pause small (4s each). Hold uses a distinct violet tint vs sky-blue inhale and deep-blue exhale.
 8. Sleep: 4s grow, 6s shrink, dim like Calm Down. After about four cycles the countdown stays off (unless Always show timer).
-9. Keys `1` through `6` select the six cards. Avoid the Urge disables the minute picker and shows *About 3 minutes.* Start skips body setup.
+9. Keys `1` through `6` select the six cards. Think First disables the minute picker and shows *About 3 minutes.* Start skips body setup.
 10. Let any timed pattern reach `0:00`. Quiet fade and the next-move line; tap or press a key to return home.
 11. Turn on Always show timer, Soft audio, Haptics, and Hum; reload — they stay. Body setup stays on unless turned off. Audio starts with Start, mutes on Pause/End. Hum changes Calm Down/Sleep technique copy and the exhale tone. With reduced-motion enabled in the OS, the bubble should not pulse in size.
 12. About shows what the app is, how to use it, the safety note, the version, links to privacy and support, and Reset settings (confirm, then only this app’s keys are cleared).
 13. Served over HTTP, `/`, `/privacy.html`, and `/support.html` load. The document links a manifest and registers a service worker. Add to Home Screen is available in a supporting browser.
-14. Avoid the Urge: no pre-roll and no duration change. Stop, then Observe (tap skips), then a dusk-clay bubble, 4s grow / 6s shrink, breath numbers 1–10 wrapping, faint wave. Expand, then *What's your next move?* Another round returns to the bubble, then Respond. Done returns home. End during the breathing returns home. Reduced motion keeps the wave still.
+14. Think First: no pre-roll and no duration change. Stop, then Observe (tap skips), then a dusk-clay bubble, 4s grow / 6s shrink, breath numbers 1–10 wrapping, faint wave. Expand, then *What's your next move?* Another round returns to the bubble, then Respond. Done returns home. End during the breathing returns home. Reduced motion keeps the wave still.

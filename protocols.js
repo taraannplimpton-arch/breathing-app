@@ -92,9 +92,10 @@
     },
     URGE: {
       id: "urge",
-      homeLabel: "Avoid the Urge",
+      homeLabel: "Think First",
       protocol: "4–6",
-      technique: "Stop, observe, breathe, then choose.",
+      technique: "Stop, notice, then choose.",
+      description: "That airport candy, the reply-all, the cart checkout. Breathe first, then decide.",
       durationNote: "About 3 minutes.",
       breaths: 15,
       breathCountWrap: 10,
@@ -116,7 +117,7 @@
       },
       lines: {
         stop: "Pause. Put it down.",
-        observe: "Notice the urge. Where do you feel it?",
+        observe: "Notice the pull. Where do you feel it?",
         expand: "Notice what changed. Widen your view.",
         respond: "What's your next move?",
         again: "Another round",
