@@ -1020,8 +1020,6 @@ body.reduce-motion .switch::after {
   margin: 0.2rem 0 0;
   font-size: 1.8rem;
   font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: lowercase;
 }
 
 .about h2:not(#about-title) {
