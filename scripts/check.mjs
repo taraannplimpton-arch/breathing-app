@@ -547,18 +547,14 @@ assert(/id="settings-open"[^>]*>\s*Settings\s*<\/button>/.test(html), "home need
 const aboutOpenTag = html.slice(html.indexOf('id="about-open"'), html.indexOf('id="about-open"') + 400);
 assert(aboutOpenTag.indexOf("</button>") > 0 && !/<svg/.test(aboutOpenTag.slice(0, aboutOpenTag.indexOf("</button>"))), "Information control must not use an icon svg");
 assert(/id="reset-settings"/.test(html) && /Reset settings/.test(html), "about needs a Reset settings button");
-assert(/privacy\.html/.test(aboutChunk) && /support\.html/.test(aboutChunk), "about must link to privacy and support");
+assert(/privacy\.html/.test(aboutChunk) && !/support\.html/.test(aboutChunk), "about must link to privacy and not support");
 assert(/id="app-version"/.test(aboutChunk), "about must show the version from the app");
 assert(/faint, dizzy, panicky, or have chest pain/.test(aboutChunk), "about must include the safety note");
 assert(/not medical advice/.test(aboutChunk) && /not for emergencies/.test(aboutChunk), "about must say it is educational, not medical advice, and not for emergencies");
 assert(!aboutChunk.includes(drinkingLine), "about must not include the heavy-drinking line");
 assert(/Think First/.test(aboutChunk), "about must name Think First");
-assert(aboutChunk.includes(thinkFirstDescription), "about must include the Think First description");
-{
-  const howPara = (html.match(/id="about-how"[^>]*>([\s\S]*?)<\/p>/) || [])[1] || "";
-  assert(howPara.length > 0 && !/airport candy/.test(howPara), "the Think First scene line must leave the how-to paragraph");
-  assert(/id="about-think"[\s\S]{0,240}Think First:/.test(aboutChunk), "Think First scene line must be its own sentence");
-}
+assert(/Six cards for six moments/.test(aboutChunk), "about must name the six cards");
+assert(/Twizzlers at the airport/.test(aboutChunk), "about must include the Think First example");
 assert(/aria-label="Think First"/.test(html), "the guide screen must be named Think First");
 assert(/noodleelder@gmail\.com/.test(aboutChunk) && !/support@example\.com/.test(aboutChunk), "about must show noodleelder@gmail.com");
 assert(html.includes(breathing.URGE.lines.respond), "respond screen must ask what's your next move");
@@ -949,7 +945,7 @@ assert(/apple-mobile-web-app-status-bar-style/.test(html), "index must set the s
 assert(/apple-mobile-web-app-title" content="Practical Breathing"/.test(html), "index must set the Apple web app title to Practical Breathing");
 assert(/<title>Practical Breathing<\/title>/.test(html), "document title must be Practical Breathing");
 assert(/<h1>\s*Practical Breathing\s*<\/h1>/.test(html), "home wordmark must be Practical Breathing");
-assert(/Practical Breathing is a quiet breathing practice/.test(aboutChunk), "About must use the Practical Breathing name");
+assert(/Practical Breathing is a breathing practice you run on your own device\./.test(aboutChunk), "About must use the Practical Breathing name");
 assert(/apple-touch-icon/.test(html) && /icon-180\.png/.test(html), "index must link a 180px apple touch icon");
 assert(/navigator\.wakeLock/.test(js) && /request\(\s*"screen"\s*\)/.test(js), "sessions must request a screen wake lock where supported");
 assert(/function releaseWakeLock/.test(js) && /releaseWakeLock\(/.test(js), "the wake lock must be released when a session ends");
@@ -977,7 +973,7 @@ assert(/viewport-fit=cover/.test(privacy) && /apple-mobile-web-app-capable/.test
 assert(/apple-mobile-web-app-title" content="Practical Breathing"/.test(privacy), "privacy page Apple title must be Practical Breathing");
 assert(/Back to Practical Breathing/.test(privacy), "privacy page must link back using the Practical Breathing name");
 assert(/Practical Breathing does not collect data/.test(privacy), "privacy page must name Practical Breathing");
-assert(/silent/i.test(support) && /haptic/i.test(support) && /reset/i.test(support), "support page must cover silent mode, haptics, and reset");
+assert(/Six cards for six moments/.test(support) && /Reset settings/.test(support), "support page must include the six cards and reset settings");
 assert(/Think First/.test(support), "support page must name Think First");
 assert(storeDoc.includes(thinkFirstDescription), "APP_STORE.md listing copy must include the Think First description");
 assert(/Think First/.test(storeDoc) && /Stop, notice, then choose\./.test(storeDoc), "APP_STORE.md must name Think First and its technique line");
@@ -1000,7 +996,7 @@ assert(/saved === "urge"/.test(js), "a saved urge id must still select Think Fir
 assert(/noodleelder@gmail\.com/.test(support) && !/support@example\.com/.test(support) && !/REPLACE support@example\.com/.test(support), "support page must show noodleelder@gmail.com");
 assert(/href="\.\/"/.test(support), "support page must link back to the app");
 assert(/apple-mobile-web-app-title" content="Practical Breathing"/.test(support), "support page Apple title must be Practical Breathing");
-assert(/Back to Practical Breathing/.test(support) && /How to use Practical Breathing/.test(support), "support page must use the Practical Breathing name");
+assert(/Back to Practical Breathing/.test(support) && /Practical Breathing is a breathing practice/.test(support), "support page must use the Practical Breathing name");
 assert(/viewport-fit=cover/.test(support), "support page must set viewport-fit=cover");
 assert(/com\.TODO\.breathe/.test(storeDoc), "APP_STORE.md must include the bundle id placeholder");
 assert(/Data Not Collected/.test(storeDoc), "APP_STORE.md must answer App Privacy as Data Not Collected");

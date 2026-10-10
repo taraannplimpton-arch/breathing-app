@@ -1016,12 +1016,22 @@ body.reduce-motion .switch::after {
   padding-left: 0;
 }
 
-.about h2 {
+#about-title {
   margin: 0.2rem 0 0;
   font-size: 1.8rem;
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: lowercase;
+}
+
+.about h2:not(#about-title) {
+  margin: 0.5rem 0 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--cream);
 }
 
 .about h3 {
@@ -1035,6 +1045,7 @@ body.reduce-motion .switch::after {
 }
 
 .about p,
+.about li,
 .legal p,
 .legal li {
   margin: 0;
@@ -1042,6 +1053,13 @@ body.reduce-motion .switch::after {
   font-size: 1rem;
   line-height: 1.5;
   color: var(--cream);
+}
+
+.about ul,
+.legal ul {
+  width: 100%;
+  margin: 0;
+  padding-left: 1.25rem;
 }
 
 .about-version {
